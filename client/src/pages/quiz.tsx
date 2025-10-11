@@ -77,19 +77,32 @@ export default function Quiz() {
     },
     onSuccess: (data) => {
       setShowFeedback(true);
+      const isLastQuestion = currentQuestionIndex === questions!.length - 1;
+      
+      // Calculate updated counts
+      const updatedCorrectCount = correctCount + (data.isCorrect ? 1 : 0);
+      let updatedIncorrectAnswers = incorrectAnswers;
+      
       if (data.isCorrect) {
         setCorrectCount(prev => prev + 1);
       } else {
         // Track incorrect answer for post-quiz review
-        setIncorrectAnswers(prev => [...prev, {
+        const newIncorrectAnswer = {
           question: questions![currentQuestionIndex],
           userAnswer: selectedAnswer!,
           explanation: data.avatarExplanation || "",
-        }]);
+        };
+        updatedIncorrectAnswers = [...incorrectAnswers, newIncorrectAnswer];
+        setIncorrectAnswers(updatedIncorrectAnswers);
       }
-      // Auto-advance to next question after brief feedback
+      
+      // Auto-advance to next question or complete quiz
       setTimeout(() => {
-        handleNextQuestion();
+        if (isLastQuestion) {
+          handleQuizComplete(updatedIncorrectAnswers, updatedCorrectCount);
+        } else {
+          handleNextQuestion();
+        }
       }, 1500);
     },
     onError: (error) => {
@@ -113,34 +126,40 @@ export default function Quiz() {
 
   const handleNextQuestion = () => {
     if (!questions) return;
+    setCurrentQuestionIndex(prev => prev + 1);
+    setSelectedAnswer(null);
+    setShowFeedback(false);
+  };
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setShowFeedback(false);
+  const handleQuizComplete = async (
+    finalIncorrectAnswers: typeof incorrectAnswers,
+    finalCorrectCount: number
+  ) => {
+    await completeQuizSession(finalIncorrectAnswers, finalCorrectCount);
+    
+    // Redirect to review if there are incorrect answers, otherwise show completion
+    if (finalIncorrectAnswers.length > 0) {
+      setLocation(`/review/${quizSessionId}`);
     } else {
-      // Complete quiz
-      completeQuizSession();
-      // Redirect to review if there are incorrect answers, otherwise show completion
-      if (incorrectAnswers.length > 0) {
-        setLocation(`/review/${quizSessionId}`);
-      } else {
-        setQuizCompleted(true);
-      }
+      setQuizCompleted(true);
     }
   };
 
-  const completeQuizSession = async () => {
+  const completeQuizSession = async (
+    finalIncorrectAnswers: typeof incorrectAnswers,
+    finalCorrectCount: number
+  ) => {
     try {
       await apiRequest("PATCH", `/api/quiz-sessions/${quizSessionId}/complete`, {
-        correctAnswers: correctCount,
+        correctAnswers: finalCorrectCount,
       });
       
       // Save incorrect answers for review session
-      if (incorrectAnswers.length > 0) {
+      if (finalIncorrectAnswers.length > 0) {
+        console.log("Saving to localStorage:", `review-${quizSessionId}`, finalIncorrectAnswers);
         localStorage.setItem(
           `review-${quizSessionId}`,
-          JSON.stringify(incorrectAnswers)
+          JSON.stringify(finalIncorrectAnswers)
         );
       }
     } catch (error) {
