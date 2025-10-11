@@ -166,8 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate explanation if answer is wrong
       if (!isCorrect) {
-        const concepts = await storage.getConceptsByPdf(question.conceptId);
-        const concept = concepts.find(c => c.id === conceptId);
+        const concept = await storage.getConcept(conceptId);
         
         if (concept) {
           avatarExplanation = await generateLovableTutorExplanation(

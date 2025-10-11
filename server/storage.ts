@@ -37,6 +37,7 @@ export interface IStorage {
   
   // Concept operations
   createConcept(concept: InsertConcept): Promise<Concept>;
+  getConcept(id: string): Promise<Concept | undefined>;
   getConceptsByPdf(pdfId: string): Promise<Concept[]>;
   
   // Question operations
@@ -107,6 +108,11 @@ export class DatabaseStorage implements IStorage {
   // Concept operations
   async createConcept(conceptData: InsertConcept): Promise<Concept> {
     const [concept] = await db.insert(concepts).values(conceptData).returning();
+    return concept;
+  }
+
+  async getConcept(id: string): Promise<Concept | undefined> {
+    const [concept] = await db.select().from(concepts).where(eq(concepts.id, id));
     return concept;
   }
 
