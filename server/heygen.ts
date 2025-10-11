@@ -28,7 +28,9 @@ export async function createAvatarSession(): Promise<SessionData> {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to create HeyGen session");
+      const errorText = await response.text();
+      console.error("HeyGen API error response:", response.status, errorText);
+      throw new Error(`Failed to create HeyGen session: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -65,7 +67,9 @@ export async function makeAvatarSpeak(
     });
 
     if (!response.ok) {
-      throw new Error("Failed to make avatar speak");
+      const errorText = await response.text();
+      console.error("HeyGen speak API error response:", response.status, errorText);
+      throw new Error(`Failed to make avatar speak: ${response.status} - ${errorText}`);
     }
   } catch (error) {
     console.error("HeyGen speak error:", error);
