@@ -16,10 +16,13 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 
 ### Key Features
 1. **Dual Mode Support**: Authenticated users get progress tracking; guest users can try without accounts
-2. **PDF Processing**: Upload PDFs → extract text → Gemini extracts concepts → generates MCQs
-3. **Adaptive Testing**: Interactive quiz with immediate feedback
-4. **Avatar Explanations**: When wrong, HeyGen avatar speaks Gemini-generated warm explanations
-5. **Progress Dashboard**: Track learning, identify weak areas, view history (auth users only)
+2. **PDF/DOCX Processing**: Upload PDFs or DOCX files → extract text → Gemini extracts concepts → generates MCQs
+3. **Assessment-Then-Teaching Flow**: 
+   - Assessment phase: Quiz shows only correct/incorrect feedback (no explanations)
+   - Teaching phase: After quiz, avatar teaches ONLY the concepts user got wrong
+4. **Spaced Repetition**: Questions prioritized by concept weakness (incorrect answer frequency)
+5. **Avatar Explanations**: HeyGen avatar delivers warm, supportive explanations for weak concepts
+6. **Progress Dashboard**: Track learning, identify weak areas, view history (available to all users)
 
 ## Data Model
 
@@ -36,24 +39,28 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 
 **Guest User Flow:**
 1. Land on homepage → "Try as Guest"
-2. Upload PDF → AI processes → generates quiz
-3. Take quiz → wrong answers trigger avatar explanations
-4. Results shown (stored locally via guestSessionId)
+2. Upload PDF/DOCX → AI processes → generates quiz
+3. Take quiz (assessment) → see only correct/incorrect feedback
+4. After quiz → review session teaches concepts where answers were wrong
+5. Avatar explains each incorrect concept with warm, supportive guidance
+6. View dashboard with progress (stored locally via guestSessionId)
 
 **Authenticated User Flow:**
 1. Sign in via Replit Auth
-2. Upload PDF → stored with userId
-3. Take quiz → progress tracked in database
-4. View dashboard with stats, weak concepts, history
-5. Return anytime with saved progress
+2. Upload PDF/DOCX → stored with userId
+3. Take quiz (assessment) → progress tracked in database
+4. After quiz → review session for incorrect answers with avatar
+5. View dashboard with stats, weak concepts, history
+6. Return anytime with saved progress
 
 ## Frontend Components
 
 ### Pages
 - `landing.tsx` - Hero, features, CTAs
-- `upload.tsx` - PDF upload interface
-- `quiz.tsx` - Quiz flow with avatar explanations
-- `dashboard.tsx` - Progress tracking (auth only)
+- `upload.tsx` - PDF/DOCX upload interface
+- `quiz.tsx` - Assessment phase (quiz without explanations)
+- `review.tsx` - Teaching phase (avatar explains wrong answers)
+- `dashboard.tsx` - Progress tracking (available to all users)
 
 ### Shared Components
 - `navbar.tsx` - Top navigation with auth state
@@ -126,24 +133,35 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - ✅ Replit Auth integration fully implemented
 - ✅ Guest mode support via localStorage sessionId
 - ✅ HeyGen avatar player with speaking animations
-- ✅ Complete quiz flow from upload → test → avatar explanation
 - ✅ Backend API endpoints implemented
 - ✅ Supabase database schema deployed via Drizzle
 - ✅ Gemini integration for concept extraction & tutor explanations
 - ✅ HeyGen API integration for avatar sessions
 - ✅ All CRUD operations with proper error handling
-- ✅ Dashboard with stats, weak concepts tracking, and history
+- ✅ Dashboard with stats, weak concepts tracking, and history (available to all users)
+- ✅ Fixed PDF parsing bug (PDFParse class usage)
+- ✅ Added DOCX file support using mammoth library
+- ✅ Implemented spaced repetition algorithm for prioritizing weak concepts
+- ✅ **NEW: Assessment-Then-Teaching Flow**
+  - Quiz now shows only correct/incorrect feedback (no explanations during assessment)
+  - After quiz completion, redirects to review session
+  - Review page teaches ONLY the concepts user got wrong with avatar explanations
+  - localStorage-based data handoff between quiz and review phases
+  - Accurate score tracking with fixed state management
 
 ## Implementation Status
-- **Frontend**: Complete with landing, upload, quiz, dashboard, and navbar
-- **Backend**: All routes implemented - auth, PDF processing, quiz, answers, HeyGen
+- **Frontend**: Complete with landing, upload, quiz, review, dashboard, and navbar
+- **Backend**: All routes implemented - auth, PDF/DOCX processing, quiz, answers, HeyGen
 - **Database**: Schema deployed, all tables created
 - **AI Integration**: Gemini concept extraction + lovable tutor explanations working
 - **Avatar**: HeyGen API integration ready (with graceful fallback)
 - **Auth**: Replit Auth fully configured for authenticated + guest users
+- **Testing**: E2E tests passing for assessment → teaching flow
 
-## Testing Needed
-- End-to-end flow: Upload PDF → Extract concepts → Take quiz → Avatar explains wrong answers
-- Dashboard data aggregation for authenticated users
-- Guest mode session persistence
-- Error states and edge cases
+## Implementation Complete
+The core AI tutor system is fully functional with:
+- PDF & DOCX upload and processing
+- Assessment-then-teaching pedagogical flow
+- Avatar-powered explanations for weak concepts
+- Spaced repetition for adaptive learning
+- Progress tracking for all users (guest & authenticated)
