@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Upload from "@/pages/upload";
 import Quiz from "@/pages/quiz";
+import Review from "@/pages/review";
 import Dashboard from "@/pages/dashboard";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
           <Route path="/" component={Landing} />
           <Route path="/upload" component={Upload} />
           <Route path="/quiz/:pdfId" component={Quiz} />
+          <Route path="/review/:sessionId" component={Review} />
           <Route path="/dashboard" component={Dashboard} />
           <Route component={NotFound} />
         </Switch>

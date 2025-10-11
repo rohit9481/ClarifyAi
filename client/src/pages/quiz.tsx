@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { QuizInterface } from "@/components/quiz-interface";
-import { AvatarPlayer } from "@/components/avatar-player";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, Trophy, Home, RotateCw } from "lucide-react";
@@ -22,10 +21,13 @@ export default function Quiz() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [currentExplanation, setCurrentExplanation] = useState<string>("");
   const [quizSessionId, setQuizSessionId] = useState<string>("");
   const [correctCount, setCorrectCount] = useState(0);
+  const [incorrectAnswers, setIncorrectAnswers] = useState<Array<{
+    question: QuestionWithConcept;
+    userAnswer: number;
+    explanation: string;
+  }>>([]);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
   // Fetch questions for this PDF (with spaced repetition)
@@ -77,16 +79,18 @@ export default function Quiz() {
       setShowFeedback(true);
       if (data.isCorrect) {
         setCorrectCount(prev => prev + 1);
-        setTimeout(() => {
-          handleNextQuestion();
-        }, 1500);
       } else {
-        // Show explanation for wrong answer
-        setCurrentExplanation(data.avatarExplanation || "");
-        setTimeout(() => {
-          setShowExplanation(true);
-        }, 1000);
+        // Track incorrect answer for post-quiz review
+        setIncorrectAnswers(prev => [...prev, {
+          question: questions![currentQuestionIndex],
+          userAnswer: selectedAnswer!,
+          explanation: data.avatarExplanation || "",
+        }]);
       }
+      // Auto-advance to next question after brief feedback
+      setTimeout(() => {
+        handleNextQuestion();
+      }, 1500);
     },
     onError: (error) => {
       toast({
@@ -114,12 +118,15 @@ export default function Quiz() {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
-      setShowExplanation(false);
-      setCurrentExplanation("");
     } else {
       // Complete quiz
-      setQuizCompleted(true);
       completeQuizSession();
+      // Redirect to review if there are incorrect answers, otherwise show completion
+      if (incorrectAnswers.length > 0) {
+        setLocation(`/review/${quizSessionId}`);
+      } else {
+        setQuizCompleted(true);
+      }
     }
   };
 
@@ -128,14 +135,17 @@ export default function Quiz() {
       await apiRequest("PATCH", `/api/quiz-sessions/${quizSessionId}/complete`, {
         correctAnswers: correctCount,
       });
+      
+      // Save incorrect answers for review session
+      if (incorrectAnswers.length > 0) {
+        localStorage.setItem(
+          `review-${quizSessionId}`,
+          JSON.stringify(incorrectAnswers)
+        );
+      }
     } catch (error) {
       console.error("Failed to complete quiz:", error);
     }
-  };
-
-  const handleExplanationComplete = () => {
-    setShowExplanation(false);
-    handleNextQuestion();
   };
 
   if (isLoading || (questions && questions.length > 0 && !quizSessionId)) {
@@ -212,18 +222,6 @@ export default function Quiz() {
             </Button>
           </div>
         </Card>
-      </div>
-    );
-  }
-
-  if (showExplanation) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <AvatarPlayer
-          conceptName={questions[currentQuestionIndex].concept.conceptName}
-          explanation={currentExplanation}
-          onComplete={handleExplanationComplete}
-        />
       </div>
     );
   }
