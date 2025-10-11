@@ -1,9 +1,8 @@
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useGuestSession } from "@/hooks/useGuestSession";
 import { useLocation } from "wouter";
 import { 
   TrendingUp, 
@@ -25,29 +24,15 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const guestSessionId = useGuestSession();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [isAuthenticated, authLoading, toast]);
-
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
-    queryKey: ["/api/dashboard"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/dashboard", isAuthenticated ? "" : `?guestSessionId=${guestSessionId}`],
   });
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-24 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -81,10 +66,10 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="space-y-2">
           <h1 className="font-heading text-4xl font-bold">
-            Welcome back, {user?.firstName || "Learner"}!
+            {isAuthenticated ? `Welcome back, ${user?.firstName || "Learner"}!` : "Your Progress"}
           </h1>
           <p className="text-xl text-muted-foreground">
-            Here's your learning progress
+            {isAuthenticated ? "Here's your learning progress" : "Track your learning journey"}
           </p>
         </div>
 

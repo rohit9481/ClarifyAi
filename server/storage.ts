@@ -57,6 +57,10 @@ export interface IStorage {
   
   // Dashboard operations
   getUserWeakConcepts(userId: string): Promise<ConceptWithStats[]>;
+  getGuestWeakConcepts(guestSessionId: string): Promise<ConceptWithStats[]>;
+  
+  // Spaced repetition
+  getPrioritizedQuestions(pdfId: string, userId?: string, guestSessionId?: string): Promise<QuestionWithConcept[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,6 +213,68 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(sql`count(distinct case when ${answers.isCorrect} = false then ${answers.id} end)`));
 
     return result as ConceptWithStats[];
+  }
+
+  async getGuestWeakConcepts(guestSessionId: string): Promise<ConceptWithStats[]> {
+    const result = await db
+      .select({
+        id: concepts.id,
+        pdfId: concepts.pdfId,
+        conceptName: concepts.conceptName,
+        conceptDescription: concepts.conceptDescription,
+        createdAt: concepts.createdAt,
+        totalQuestions: sql<number>`count(distinct ${questions.id})`,
+        incorrectCount: sql<number>`count(distinct case when ${answers.isCorrect} = false then ${answers.id} end)`,
+      })
+      .from(concepts)
+      .innerJoin(questions, eq(questions.conceptId, concepts.id))
+      .innerJoin(answers, eq(answers.conceptId, concepts.id))
+      .innerJoin(quizSessions, and(
+        eq(answers.quizSessionId, quizSessions.id),
+        eq(quizSessions.guestSessionId, guestSessionId)
+      ))
+      .groupBy(concepts.id)
+      .having(sql`count(distinct case when ${answers.isCorrect} = false then ${answers.id} end) > 0`)
+      .orderBy(desc(sql`count(distinct case when ${answers.isCorrect} = false then ${answers.id} end)`));
+
+    return result as ConceptWithStats[];
+  }
+
+  // Spaced repetition - prioritize questions from weak concepts
+  async getPrioritizedQuestions(pdfId: string, userId?: string, guestSessionId?: string): Promise<QuestionWithConcept[]> {
+    // Get all questions for this PDF
+    const allQuestions = await this.getQuestionsWithConceptsByPdf(pdfId);
+    
+    if (!userId && !guestSessionId) {
+      // No user context, return questions in original order
+      return allQuestions;
+    }
+
+    // Get weak concepts for this user/guest
+    const weakConcepts = userId 
+      ? await this.getUserWeakConcepts(userId)
+      : await this.getGuestWeakConcepts(guestSessionId!);
+
+    // Create a map of concept IDs to their incorrectCount for priority sorting
+    const conceptPriority = new Map<string, number>();
+    weakConcepts.forEach(concept => {
+      conceptPriority.set(concept.id, concept.incorrectCount);
+    });
+
+    // Sort questions: weak concepts first (by incorrectCount desc), then others randomly
+    const prioritized = allQuestions.sort((a, b) => {
+      const aPriority = conceptPriority.get(a.conceptId) || 0;
+      const bPriority = conceptPriority.get(b.conceptId) || 0;
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority; // Higher priority (more incorrect) first
+      }
+      
+      // For same priority, randomize
+      return Math.random() - 0.5;
+    });
+
+    return prioritized;
   }
 }
 

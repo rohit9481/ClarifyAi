@@ -20,20 +20,10 @@ function Router() {
       <Navbar />
       <main className="flex-1">
         <Switch>
-          {isLoading || !isAuthenticated ? (
-            <>
-              <Route path="/" component={Landing} />
-              <Route path="/upload" component={Upload} />
-              <Route path="/quiz/:pdfId" component={Quiz} />
-            </>
-          ) : (
-            <>
-              <Route path="/" component={Landing} />
-              <Route path="/upload" component={Upload} />
-              <Route path="/quiz/:pdfId" component={Quiz} />
-              <Route path="/dashboard" component={Dashboard} />
-            </>
-          )}
+          <Route path="/" component={Landing} />
+          <Route path="/upload" component={Upload} />
+          <Route path="/quiz/:pdfId" component={Quiz} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route component={NotFound} />
         </Switch>
       </main>

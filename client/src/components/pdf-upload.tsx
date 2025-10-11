@@ -40,7 +40,7 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
     },
     onSuccess: (data) => {
       toast({
-        title: "PDF Processed Successfully!",
+        title: "Document Processed Successfully!",
         description: `Extracted ${data.conceptsCount} concepts and generated ${data.questionsCount} questions. Ready to quiz!`,
       });
       onUploadComplete(data.pdfId);
@@ -59,12 +59,14 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
     setIsDragging(false);
     
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile?.type === "application/pdf") {
+    const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    
+    if (droppedFile && validTypes.includes(droppedFile.type)) {
       setFile(droppedFile);
     } else {
       toast({
         title: "Invalid File",
-        description: "Please upload a PDF file.",
+        description: "Please upload a PDF or DOCX file.",
         variant: "destructive",
       });
     }
@@ -72,12 +74,14 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile?.type === "application/pdf") {
+    const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    
+    if (selectedFile && validTypes.includes(selectedFile.type)) {
       setFile(selectedFile);
     } else {
       toast({
         title: "Invalid File",
-        description: "Please upload a PDF file.",
+        description: "Please upload a PDF or DOCX file.",
         variant: "destructive",
       });
     }
@@ -121,7 +125,7 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
           
           {uploadMutation.isPending ? (
             <div className="space-y-2">
-              <h3 className="font-heading text-xl font-semibold">Processing Your PDF...</h3>
+              <h3 className="font-heading text-xl font-semibold">Processing Your Document...</h3>
               <p className="text-muted-foreground">
                 Extracting concepts and generating quiz questions
               </p>
@@ -140,7 +144,7 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
             <div className="space-y-2">
               <h3 className="font-heading text-xl font-semibold">Upload Your Study Material</h3>
               <p className="text-muted-foreground">
-                Drag and drop a PDF file here, or click to browse
+                Drag and drop a PDF or DOCX file here, or click to browse
               </p>
             </div>
           )}
@@ -150,7 +154,7 @@ export function PdfUpload({ onUploadComplete }: PdfUploadProps) {
               <>
                 <input
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={handleFileChange}
                   className="hidden"
                   id="pdf-upload"

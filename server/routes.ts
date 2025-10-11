@@ -6,10 +6,11 @@ import multer from "multer";
 import { extractConceptsAndQuestions, generateLovableTutorExplanation } from "./gemini.js";
 import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
 import { createRequire } from "module";
+import mammoth from "mammoth";
 
 // pdf-parse is CommonJS, use createRequire
 const require = createRequire(import.meta.url);
-const { PDFParse: pdfParse } = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -29,11 +30,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PDF Upload & Processing
+  // Document Upload & Processing (supports PDF and DOCX)
   app.post("/api/upload-pdf", upload.single("pdf"), async (req: any, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "No PDF file uploaded" });
+        return res.status(400).json({ message: "No file uploaded" });
       }
 
       const userId = req.user?.claims?.sub;
@@ -43,14 +44,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User or guest session required" });
       }
 
-      // Extract text from PDF
-      const pdfBuffer = req.file.buffer;
-      const parser = new pdfParse({ data: pdfBuffer });
-      const pdfData = await parser.getText();
-      const extractedText = pdfData.pages.map((p: any) => p.text).join('\n');
+      const fileBuffer = req.file.buffer;
+      const fileName = req.file.originalname;
+      const fileExtension = fileName.split('.').pop()?.toLowerCase();
+      
+      console.log(`Processing ${fileExtension?.toUpperCase()}: ${fileName}, size: ${req.file.size} bytes`);
+      
+      let extractedText = "";
+
+      // Extract text based on file type
+      if (fileExtension === "pdf") {
+        const parser = new PDFParse({ data: fileBuffer });
+        const pdfData = await parser.getText();
+        extractedText = pdfData.pages.map((p: any) => p.text).join('\n');
+      } else if (fileExtension === "docx") {
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        extractedText = result.value;
+      } else {
+        return res.status(400).json({ message: "Unsupported file type. Please upload PDF or DOCX files." });
+      }
+      
+      console.log(`Extracted ${extractedText.length} characters from ${fileExtension?.toUpperCase()}`);
 
       if (!extractedText || extractedText.trim().length < 100) {
-        return res.status(400).json({ message: "PDF text too short or empty" });
+        return res.status(400).json({ message: "Document text too short or empty" });
       }
 
       // Create PDF record
@@ -98,11 +115,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get questions for a PDF
-  app.get("/api/questions/:pdfId", async (req, res) => {
+  // Get questions for a PDF (with spaced repetition prioritization)
+  app.get("/api/questions/:pdfId", async (req: any, res) => {
     try {
       const { pdfId } = req.params;
-      const questions = await storage.getQuestionsWithConceptsByPdf(pdfId);
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.query.guestSessionId;
+      
+      const questions = await storage.getPrioritizedQuestions(pdfId, userId, guestSessionId);
       res.json(questions);
     } catch (error) {
       console.error("Error fetching questions:", error);
@@ -190,13 +210,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard (authenticated users only)
-  app.get("/api/dashboard", isAuthenticated, async (req: any, res) => {
+  // Dashboard (supports both authenticated and guest users)
+  app.get("/api/dashboard", async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.query.guestSessionId;
 
-      const quizSessions = await storage.getUserQuizSessions(userId);
-      const weakConcepts = await storage.getUserWeakConcepts(userId);
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ message: "User or guest session required" });
+      }
+
+      const quizSessions = userId 
+        ? await storage.getUserQuizSessions(userId)
+        : await storage.getGuestQuizSessions(guestSessionId);
+
+      const weakConcepts = userId
+        ? await storage.getUserWeakConcepts(userId)
+        : await storage.getGuestWeakConcepts(guestSessionId);
 
       // Calculate stats
       const totalQuizzes = quizSessions.length;

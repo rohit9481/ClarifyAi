@@ -28,9 +28,9 @@ export default function Quiz() {
   const [correctCount, setCorrectCount] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
-  // Fetch questions for this PDF
+  // Fetch questions for this PDF (with spaced repetition)
   const { data: questions, isLoading } = useQuery<QuestionWithConcept[]>({
-    queryKey: ["/api/questions", pdfId],
+    queryKey: ["/api/questions", pdfId, isAuthenticated ? "" : `?guestSessionId=${guestSessionId}`],
     enabled: !!pdfId,
   });
 
@@ -39,29 +39,39 @@ export default function Quiz() {
     if (questions && questions.length > 0 && !quizSessionId) {
       const createSession = async () => {
         try {
-          const session = await apiRequest("POST", "/api/quiz-sessions", {
+          console.log("Creating quiz session for pdfId:", pdfId, "guestSessionId:", guestSessionId);
+          const response = await apiRequest("POST", "/api/quiz-sessions", {
             pdfId,
             totalQuestions: questions.length,
             guestSessionId: !isAuthenticated ? guestSessionId : undefined,
           });
+          const session = await response.json();
+          console.log("Quiz session created:", session.id);
           setQuizSessionId(session.id);
         } catch (error) {
           console.error("Failed to create quiz session:", error);
+          toast({
+            title: "Session Error",
+            description: "Failed to create quiz session. Using fallback mode.",
+            variant: "destructive",
+          });
+          // Fallback: use a temporary session ID to allow quiz to proceed
+          setQuizSessionId("temp-" + Date.now());
         }
       };
       createSession();
     }
-  }, [questions, pdfId, quizSessionId, isAuthenticated, guestSessionId]);
+  }, [questions, pdfId, quizSessionId, isAuthenticated, guestSessionId, toast]);
 
   const submitAnswerMutation = useMutation<Answer, Error, { questionId: string; userAnswer: number }>({
     mutationFn: async ({ questionId, userAnswer }): Promise<Answer> => {
-      const result = await apiRequest("POST", "/api/submit-answer", {
+      const response = await apiRequest("POST", "/api/submit-answer", {
         quizSessionId,
         questionId,
         conceptId: questions![currentQuestionIndex].conceptId,
         userAnswer,
       });
-      return result as Answer;
+      return await response.json();
     },
     onSuccess: (data) => {
       setShowFeedback(true);
@@ -88,7 +98,7 @@ export default function Quiz() {
   });
 
   const handleSubmitAnswer = () => {
-    if (selectedAnswer === null || !questions) return;
+    if (selectedAnswer === null || !questions || !quizSessionId) return;
 
     const currentQuestion = questions[currentQuestionIndex];
     submitAnswerMutation.mutate({
@@ -128,12 +138,14 @@ export default function Quiz() {
     handleNextQuestion();
   };
 
-  if (isLoading) {
+  if (isLoading || (questions && questions.length > 0 && !quizSessionId)) {
     return (
       <div className="container mx-auto px-4 py-24 flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading quiz questions...</p>
+          <p className="text-muted-foreground">
+            {isLoading ? "Loading quiz questions..." : "Preparing your quiz..."}
+          </p>
         </div>
       </div>
     );
