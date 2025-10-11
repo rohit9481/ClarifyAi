@@ -132,36 +132,52 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - ✅ Theme system with light/dark mode (Inter + Lexend fonts)
 - ✅ Replit Auth integration fully implemented
 - ✅ Guest mode support via localStorage sessionId
-- ✅ HeyGen avatar player with speaking animations
 - ✅ Backend API endpoints implemented
 - ✅ Supabase database schema deployed via Drizzle
-- ✅ Gemini integration for concept extraction & tutor explanations
-- ✅ HeyGen API integration for avatar sessions
+- ✅ Gemini integration for concept extraction & lovable tutor explanations
 - ✅ All CRUD operations with proper error handling
 - ✅ Dashboard with stats, weak concepts tracking, and history (available to all users)
 - ✅ Fixed PDF parsing bug (PDFParse class usage)
 - ✅ Added DOCX file support using mammoth library
 - ✅ Implemented spaced repetition algorithm for prioritizing weak concepts
-- ✅ **NEW: Assessment-Then-Teaching Flow**
+- ✅ **Assessment-Then-Teaching Flow**
   - Quiz now shows only correct/incorrect feedback (no explanations during assessment)
   - After quiz completion, redirects to review session
-  - Review page teaches ONLY the concepts user got wrong with avatar explanations
+  - Review page teaches ONLY the concepts user got wrong with explanations
   - localStorage-based data handoff between quiz and review phases
   - Accurate score tracking with fixed state management
+- ✅ **Fixed Text Explanations Bug**
+  - Added getConcept() method to storage layer
+  - Gemini AI now generates meaningful explanations (397+ chars)
+  - Text explanations display correctly on review page
+- ✅ **Implemented Web Speech API for Audio**
+  - Browser-based text-to-speech (no API keys needed)
+  - Warm, friendly voice with optimized speech parameters
+  - Play/pause, mute, replay controls
+  - Auto-plays explanations on review page
+  - Works in all modern browsers (Chrome, Edge, Safari, Firefox)
 
 ## Implementation Status
 - **Frontend**: Complete with landing, upload, quiz, review, dashboard, and navbar
-- **Backend**: All routes implemented - auth, PDF/DOCX processing, quiz, answers, HeyGen
+- **Backend**: All routes implemented - auth, PDF/DOCX processing, quiz, answers
 - **Database**: Schema deployed, all tables created
-- **AI Integration**: Gemini concept extraction + lovable tutor explanations working
-- **Avatar**: HeyGen API integration ready (with graceful fallback)
+- **AI Integration**: Gemini concept extraction + lovable tutor explanations working perfectly
+- **Audio**: Web Speech API providing browser-based text-to-speech
 - **Auth**: Replit Auth fully configured for authenticated + guest users
 - **Testing**: E2E tests passing for assessment → teaching flow
 
-## Implementation Complete
+## Implementation Complete ✅
 The core AI tutor system is fully functional with:
-- PDF & DOCX upload and processing
-- Assessment-then-teaching pedagogical flow
-- Avatar-powered explanations for weak concepts
-- Spaced repetition for adaptive learning
-- Progress tracking for all users (guest & authenticated)
+- **PDF & DOCX upload and processing** - Extracts text and concepts via Gemini
+- **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching
+- **Audio explanations** - Browser text-to-speech with warm, friendly voice
+- **Text explanations** - Always visible, AI-generated supportive guidance
+- **Spaced repetition** - Prioritizes weak concepts for adaptive learning
+- **Progress tracking** - Available to all users (guest & authenticated)
+
+## Audio Implementation Notes
+- **Web Speech API** is used for text-to-speech (works in Chrome, Edge, Safari, Firefox)
+- **No API keys required** - Browser-native functionality
+- **Auto-plays** on review page with play/pause/replay controls
+- **Graceful fallback** - Text explanations always visible if audio unavailable
+- **Voice settings**: Rate 0.9 (clarity), Pitch 1.1 (friendliness), auto-selects warm voices
