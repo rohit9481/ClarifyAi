@@ -141,3 +141,36 @@ Keep it conversational, supportive, and under 100 words.`;
     return "Great try! This concept can be tricky, but you're making progress. Let's keep learning together!";
   }
 }
+
+export async function generateConceptAnswer(
+  conceptName: string,
+  conceptDescription: string,
+  studentQuestion: string
+): Promise<string> {
+  try {
+    const prompt = `You are a warm, supportive AI tutor helping a student learn about: ${conceptName}
+
+Concept Description: ${conceptDescription}
+
+The student asks: "${studentQuestion}"
+
+Provide a clear, helpful answer that:
+1. Directly addresses their question
+2. Uses simple, easy-to-understand language
+3. Includes relevant examples when helpful
+4. Encourages further learning
+5. Stays warm and supportive in tone
+
+Keep the answer concise but thorough (3-5 sentences).`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    
+    return response.text || "That's a great question! Let me help you understand this concept better.";
+  } catch (error) {
+    console.error("Gemini answer generation error:", error);
+    return "That's an interesting question! This concept relates to the main ideas we're studying. Let's explore it together.";
+  }
+}

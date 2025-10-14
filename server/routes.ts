@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { setupAuth, isAuthenticated } from "./replitAuth.js";
 import multer from "multer";
-import { extractConceptsAndQuestions, generateLovableTutorExplanation } from "./gemini.js";
+import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer } from "./gemini.js";
 import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
 import { createRequire } from "module";
 import mammoth from "mammoth";
@@ -112,6 +112,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("PDF upload error:", error);
       res.status(500).json({ message: error.message || "Failed to process PDF" });
+    }
+  });
+
+  // Get concept by ID
+  app.get("/api/concepts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const concept = await storage.getConcept(id);
+      
+      if (!concept) {
+        return res.status(404).json({ message: "Concept not found" });
+      }
+      
+      res.json(concept);
+    } catch (error) {
+      console.error("Error fetching concept:", error);
+      res.status(500).json({ message: "Failed to fetch concept" });
+    }
+  });
+
+  // Ask question about concept
+  app.post("/api/ask-concept-question", async (req, res) => {
+    try {
+      const { conceptId, question } = req.body;
+      
+      const concept = await storage.getConcept(conceptId);
+      if (!concept) {
+        return res.status(404).json({ message: "Concept not found" });
+      }
+
+      // Generate answer using Gemini
+      const answer = await generateConceptAnswer(
+        concept.conceptName,
+        concept.conceptDescription,
+        question
+      );
+      
+      res.json({ answer });
+    } catch (error) {
+      console.error("Error answering question:", error);
+      res.status(500).json({ message: "Failed to answer question" });
     }
   });
 

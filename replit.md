@@ -104,10 +104,14 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `POST /api/submit-answer` - Submit answer, get explanation
 - `PATCH /api/quiz-sessions/:id/complete` - Mark session complete
 
-### Dashboard (Auth only)
-- `GET /api/dashboard` - Get user stats, weak concepts, history
+### Dashboard
+- `GET /api/dashboard` - Get user stats, weak concepts, history (available to all users)
 
-### HeyGen Avatar
+### Interactive Learning
+- `GET /api/concepts/:id` - Get concept details by ID
+- `POST /api/ask-concept-question` - Ask Gemini a question about a concept (for teaching modes)
+
+### HeyGen Avatar (Future)
 - `POST /api/heygen/create-session` - Initialize avatar session
 - `POST /api/heygen/speak` - Make avatar speak text
 - `POST /api/heygen/close-session` - End avatar session
@@ -156,6 +160,29 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Play/pause, mute, replay controls
   - Auto-plays explanations on review page
   - Works in all modern browsers (Chrome, Edge, Safari, Firefox)
+- ✅ **Session Report with Performance Charts**
+  - Comprehensive report page showing quiz results with score percentage
+  - Performance chart by concept showing correct/incorrect breakdown
+  - Detailed Q&A review section with all questions and answers
+  - Areas for improvement section identifying weak concepts
+  - "Teach Me" buttons for each weak concept to start interactive learning
+- ✅ **Interactive Teaching Modes**
+  - Teaching mode selection page with two options
+  - Virtual Avatar Mode: Voice-based learning with Web Speech API (voice input/output)
+  - Text Mode: Chat-based learning for text interaction
+  - Both modes use Gemini AI for answering concept questions
+- ✅ **Virtual Learning Mode Implementation**
+  - Real-time voice Q&A using Web Speech API (speech recognition & synthesis)
+  - Chat history showing conversation between student and tutor
+  - Fixed critical bug: apiRequest returns Response object, must call .json() to parse
+  - Gemini-powered answers for student questions about weak concepts
+  - Voice controls: mute/unmute, listening indicator
+  - "I'm Clear" button to mark concept mastery and return to report
+- ✅ **Text Learning Mode Implementation**
+  - Chat interface for text-based Q&A
+  - Gemini-powered conversational tutoring
+  - Message history with user/assistant distinction
+  - Send button for submitting questions
 
 ## Implementation Status
 - **Frontend**: Complete with landing, upload, quiz, review, dashboard, and navbar
@@ -167,17 +194,30 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - **Testing**: E2E tests passing for assessment → teaching flow
 
 ## Implementation Complete ✅
-The core AI tutor system is fully functional with:
+The comprehensive AI tutor system is fully functional with:
 - **PDF & DOCX upload and processing** - Extracts text and concepts via Gemini
-- **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching
+- **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching with detailed reports
+- **Session reports with charts** - Performance visualization, Q&A review, weak concept identification
+- **Interactive teaching modes** - Choice between Virtual (voice) and Text (chat) learning experiences
+- **Virtual Avatar Mode** - Real-time voice Q&A using Web Speech API with Gemini-powered answers
+- **Text Learning Mode** - Chat-based conversational tutoring with Gemini AI
 - **Audio explanations** - Browser text-to-speech with warm, friendly voice
 - **Text explanations** - Always visible, AI-generated supportive guidance
 - **Spaced repetition** - Prioritizes weak concepts for adaptive learning
 - **Progress tracking** - Available to all users (guest & authenticated)
+- **Production-ready** - Proper error handling, graceful degradation, no debug code
 
 ## Audio Implementation Notes
 - **Web Speech API** is used for text-to-speech (works in Chrome, Edge, Safari, Firefox)
 - **No API keys required** - Browser-native functionality
+- **Graceful degradation** - Virtual mode works even without speech support (text chat remains functional)
 - **Auto-plays** on review page with play/pause/replay controls
-- **Graceful fallback** - Text explanations always visible if audio unavailable
 - **Voice settings**: Rate 0.9 (clarity), Pitch 1.1 (friendliness), auto-selects warm voices
+
+## Interactive Teaching Implementation
+- **Dual mode approach** - Users choose between voice-based (Virtual) or text-based (Text) learning
+- **Gemini-powered Q&A** - Both modes use POST /api/ask-concept-question endpoint
+- **Real-time responses** - Immediate AI-generated answers to student questions
+- **Conversation history** - Full chat log maintained during learning session
+- **Concept mastery tracking** - "I'm Clear" button to mark concepts as understood
+- **Error resilience** - Fallback messages if Gemini API fails, graceful handling of missing browser features

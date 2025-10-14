@@ -13,6 +13,8 @@ import Quiz from "@/pages/quiz";
 import Review from "@/pages/review";
 import Report from "@/pages/report";
 import TeachMode from "@/pages/teach-mode";
+import VirtualLearn from "@/pages/virtual-learn";
+import TextLearn from "@/pages/text-learn";
 import Dashboard from "@/pages/dashboard";
 
 function Router() {
@@ -29,6 +31,8 @@ function Router() {
           <Route path="/review/:sessionId" component={Review} />
           <Route path="/report/:sessionId" component={Report} />
           <Route path="/teach-mode/:sessionId/:conceptId" component={TeachMode} />
+          <Route path="/virtual-learn/:sessionId/:conceptId" component={VirtualLearn} />
+          <Route path="/text-learn/:sessionId/:conceptId" component={TextLearn} />
           <Route path="/dashboard" component={Dashboard} />
           <Route component={NotFound} />
         </Switch>
