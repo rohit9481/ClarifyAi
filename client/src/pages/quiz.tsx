@@ -137,12 +137,8 @@ export default function Quiz() {
   ) => {
     await completeQuizSession(finalIncorrectAnswers, finalCorrectCount);
     
-    // Redirect to review if there are incorrect answers, otherwise show completion
-    if (finalIncorrectAnswers.length > 0) {
-      setLocation(`/review/${quizSessionId}`);
-    } else {
-      setQuizCompleted(true);
-    }
+    // Always redirect to report page to show session summary
+    setLocation(`/report/${quizSessionId}`);
   };
 
   const completeQuizSession = async (

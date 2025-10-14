@@ -209,6 +209,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get quiz session report
+  app.get("/api/quiz-sessions/:id/report", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sessionDetails = await storage.getQuizSessionWithDetails(id);
+      
+      if (!sessionDetails) {
+        return res.status(404).json({ message: "Quiz session not found" });
+      }
+
+      res.json(sessionDetails);
+    } catch (error) {
+      console.error("Error fetching quiz session report:", error);
+      res.status(500).json({ message: "Failed to fetch quiz session report" });
+    }
+  });
+
   // Dashboard (supports both authenticated and guest users)
   app.get("/api/dashboard", async (req: any, res) => {
     try {

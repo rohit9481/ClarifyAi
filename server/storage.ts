@@ -51,6 +51,7 @@ export interface IStorage {
   updateQuizSession(id: string, correctAnswers: number): Promise<void>;
   getUserQuizSessions(userId: string): Promise<QuizSession[]>;
   getGuestQuizSessions(guestSessionId: string): Promise<QuizSession[]>;
+  getQuizSessionWithDetails(id: string): Promise<any>;
   
   // Answer operations
   createAnswer(answer: InsertAnswer): Promise<Answer>;
@@ -183,6 +184,38 @@ export class DatabaseStorage implements IStorage {
       .from(quizSessions)
       .where(eq(quizSessions.guestSessionId, guestSessionId))
       .orderBy(desc(quizSessions.createdAt));
+  }
+
+  async getQuizSessionWithDetails(id: string): Promise<any> {
+    const [session] = await db.select().from(quizSessions).where(eq(quizSessions.id, id));
+    
+    if (!session) {
+      return null;
+    }
+
+    const sessionAnswers = await db
+      .select({
+        id: answers.id,
+        quizSessionId: answers.quizSessionId,
+        questionId: answers.questionId,
+        conceptId: answers.conceptId,
+        userAnswer: answers.userAnswer,
+        isCorrect: answers.isCorrect,
+        avatarExplanation: answers.avatarExplanation,
+        answeredAt: answers.answeredAt,
+        question: questions,
+        concept: concepts,
+      })
+      .from(answers)
+      .innerJoin(questions, eq(answers.questionId, questions.id))
+      .innerJoin(concepts, eq(answers.conceptId, concepts.id))
+      .where(eq(answers.quizSessionId, id))
+      .orderBy(answers.answeredAt);
+
+    return {
+      ...session,
+      answers: sessionAnswers,
+    };
   }
 
   // Answer operations

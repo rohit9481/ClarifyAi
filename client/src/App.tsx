@@ -11,6 +11,8 @@ import Landing from "@/pages/landing";
 import Upload from "@/pages/upload";
 import Quiz from "@/pages/quiz";
 import Review from "@/pages/review";
+import Report from "@/pages/report";
+import TeachMode from "@/pages/teach-mode";
 import Dashboard from "@/pages/dashboard";
 
 function Router() {
@@ -25,6 +27,8 @@ function Router() {
           <Route path="/upload" component={Upload} />
           <Route path="/quiz/:pdfId" component={Quiz} />
           <Route path="/review/:sessionId" component={Review} />
+          <Route path="/report/:sessionId" component={Report} />
+          <Route path="/teach-mode/:sessionId/:conceptId" component={TeachMode} />
           <Route path="/dashboard" component={Dashboard} />
           <Route component={NotFound} />
         </Switch>
