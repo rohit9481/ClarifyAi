@@ -160,10 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate new questions for a concept (for re-testing)
-  app.post("/api/concepts/:id/generate-questions", async (req: any, res) => {
+  // Generate new questions for multiple concepts (for re-testing)
+  app.post("/api/generate-retest-questions", async (req: any, res) => {
     try {
-      const conceptId = req.params.id;
+      const { conceptIds } = req.body;
       const userId = req.user?.claims?.sub;
       const guestSessionId = req.body.guestSessionId;
 
@@ -171,41 +171,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User or guest session required" });
       }
 
-      // Get the concept details
-      const concept = await storage.getConcept(conceptId);
-      if (!concept) {
-        return res.status(404).json({ message: "Concept not found" });
+      if (!conceptIds || conceptIds.length === 0) {
+        return res.status(400).json({ message: "Concept IDs required" });
       }
 
-      // Get the PDF to extract relevant text
-      const pdf = await storage.getPdf(concept.pdfId);
-      if (!pdf) {
-        return res.status(404).json({ message: "PDF not found" });
+      const allStoredQuestions = [];
+      let pdfId = null;
+
+      // Generate questions for each concept
+      for (const conceptId of conceptIds) {
+        const concept = await storage.getConcept(conceptId);
+        if (!concept) {
+          continue; // Skip invalid concepts
+        }
+
+        if (!pdfId) {
+          pdfId = concept.pdfId;
+        }
+
+        // Get the PDF to extract relevant text
+        const pdf = await storage.getPdf(concept.pdfId);
+        if (!pdf) {
+          continue;
+        }
+
+        // Generate new questions using Gemini
+        const conceptText = `Concept: ${concept.conceptName}\nDescription: ${concept.conceptDescription}\n\nContext from document:\n${pdf.extractedText.substring(0, 2000)}`;
+        const newQuestions = await extractConceptsAndQuestions(conceptText, 1);
+
+        if (newQuestions.length > 0 && newQuestions[0].questions.length > 0) {
+          // Store the new questions
+          for (const question of newQuestions[0].questions) {
+            const stored = await storage.createQuestion({
+              conceptId: concept.id,
+              questionText: question.questionText,
+              options: question.options,
+              correctAnswer: question.correctAnswer,
+            });
+            allStoredQuestions.push(stored);
+          }
+        }
       }
 
-      // Generate new questions using Gemini
-      const conceptText = `Concept: ${concept.conceptName}\nDescription: ${concept.conceptDescription}\n\nContext from document:\n${pdf.extractedText.substring(0, 2000)}`;
-      const newQuestions = await extractConceptsAndQuestions(conceptText, 1);
-
-      if (newQuestions.length === 0 || newQuestions[0].questions.length === 0) {
-        return res.status(500).json({ message: "Failed to generate new questions" });
+      if (allStoredQuestions.length === 0) {
+        return res.status(500).json({ message: "Failed to generate any questions" });
       }
 
-      // Store the new questions
-      const storedQuestions = [];
-      for (const question of newQuestions[0].questions) {
-        const stored = await storage.createQuestion({
-          conceptId: concept.id,
-          questionText: question.questionText,
-          options: question.options,
-          correctAnswer: question.correctAnswer,
-        });
-        storedQuestions.push(stored);
-      }
+      // Create a single quiz session with all the questionIds
+      const questionIds = allStoredQuestions.map(q => q.id);
+      const quizSession = await storage.createQuizSession({
+        pdfId: pdfId!,
+        userId: userId || null,
+        guestSessionId: guestSessionId || null,
+        totalQuestions: allStoredQuestions.length,
+        correctAnswers: 0,
+        questionIds, // Store specific question IDs for this session
+      });
 
-      res.json({ questions: storedQuestions, count: storedQuestions.length });
+      res.json({ 
+        questions: allStoredQuestions, 
+        count: allStoredQuestions.length,
+        quizSessionId: quizSession.id 
+      });
     } catch (error: any) {
-      console.error("Error generating new questions:", error);
+      console.error("Error generating retest questions:", error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -234,7 +263,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get questions for a PDF (with spaced repetition prioritization)
+  // Get questions for a quiz session (filters by questionIds if session has specific questions)
+  app.get("/api/quiz-sessions/:sessionId/questions", async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.query.guestSessionId;
+      
+      // Get the quiz session
+      const session = await storage.getQuizSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Quiz session not found" });
+      }
+      
+      // If session has specific questionIds, fetch only those
+      if (session.questionIds && session.questionIds.length > 0) {
+        const questions = await storage.getQuestionsByIds(session.questionIds);
+        res.json(questions);
+      } else {
+        // Otherwise, get all questions for the PDF (with spaced repetition)
+        const questions = await storage.getPrioritizedQuestions(session.pdfId, userId, guestSessionId);
+        res.json(questions);
+      }
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      res.status(500).json({ message: "Failed to fetch questions" });
+    }
+  });
+
+  // Get questions for a PDF (with spaced repetition prioritization) - legacy endpoint
   app.get("/api/questions/:pdfId", async (req: any, res) => {
     try {
       const { pdfId } = req.params;

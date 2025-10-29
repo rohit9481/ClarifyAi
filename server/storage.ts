@@ -48,9 +48,11 @@ export interface IStorage {
   getQuestionsByConcept(conceptId: string): Promise<Question[]>;
   getQuestionsWithConceptsByPdf(pdfId: string): Promise<QuestionWithConcept[]>;
   getQuestion(id: string): Promise<Question | undefined>;
+  getQuestionsByIds(questionIds: string[]): Promise<QuestionWithConcept[]>;
   
   // Quiz session operations
   createQuizSession(session: InsertQuizSession): Promise<QuizSession>;
+  getQuizSession(id: string): Promise<QuizSession | undefined>;
   updateQuizSession(id: string, correctAnswers: number): Promise<void>;
   getUserQuizSessions(userId: string): Promise<QuizSession[]>;
   getGuestQuizSessions(guestSessionId: string): Promise<QuizSession[]>;
@@ -165,9 +167,34 @@ export class DatabaseStorage implements IStorage {
     return question;
   }
 
+  async getQuestionsByIds(questionIds: string[]): Promise<QuestionWithConcept[]> {
+    const { inArray } = await import('drizzle-orm');
+    
+    const result = await db
+      .select({
+        id: questions.id,
+        conceptId: questions.conceptId,
+        questionText: questions.questionText,
+        options: questions.options,
+        correctAnswer: questions.correctAnswer,
+        createdAt: questions.createdAt,
+        concept: concepts,
+      })
+      .from(questions)
+      .innerJoin(concepts, eq(questions.conceptId, concepts.id))
+      .where(inArray(questions.id, questionIds));
+
+    return result as QuestionWithConcept[];
+  }
+
   // Quiz session operations
   async createQuizSession(sessionData: InsertQuizSession): Promise<QuizSession> {
     const [session] = await db.insert(quizSessions).values(sessionData).returning();
+    return session;
+  }
+
+  async getQuizSession(id: string): Promise<QuizSession | undefined> {
+    const [session] = await db.select().from(quizSessions).where(eq(quizSessions.id, id));
     return session;
   }
 

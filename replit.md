@@ -173,10 +173,12 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Toast notifications when concepts marked as mastered
   - Persistent tracking across sessions for both authenticated and guest users
 - ✅ **Re-test with New Questions**
-  - POST /api/concepts/:id/generate-questions endpoint using Gemini AI
+  - POST /api/generate-retest-questions endpoint using Gemini AI
   - "Re-test Weak Concepts" button on session report page
-  - Generates 5 fresh questions per weak concept
-  - Creates new quiz session with only the new questions
+  - Generates 5 fresh questions per weak concept  
+  - Creates ONE quiz session with all new questions (consolidated)
+  - Quiz page intelligently detects session vs PDF IDs
+  - Fixed SQL array handling with inArray() for question filtering
   - Loading states and user feedback during question generation
 - ✅ **Session Report with Performance Charts**
   - Comprehensive report page showing quiz results with score percentage
@@ -219,11 +221,14 @@ The comprehensive AI tutor system is fully functional with:
 - **Interactive teaching modes** - Choice between Virtual (voice) and Text (chat) learning experiences
 - **Virtual Avatar Mode** - Real-time voice Q&A using Web Speech API with Gemini-powered answers
 - **Text Learning Mode** - Chat-based conversational tutoring with Gemini AI
+- **Concept mastery tracking** - Mark concepts as "clear" with persistent database tracking
+- **Re-test with new questions** - Generate fresh questions for weak concepts via Gemini AI
 - **Audio explanations** - Browser text-to-speech with warm, friendly voice
 - **Text explanations** - Always visible, AI-generated supportive guidance
 - **Spaced repetition** - Prioritizes weak concepts for adaptive learning
 - **Progress tracking** - Available to all users (guest & authenticated)
-- **Production-ready** - Proper error handling, graceful degradation, no debug code
+- **Dual authentication** - Google OAuth (for local) + Replit Auth (for Replit platform)
+- **Production-ready** - Proper error handling, graceful degradation, comprehensive documentation
 
 ## Audio Implementation Notes
 - **Web Speech API** is used for text-to-speech (works in Chrome, Edge, Safari, Firefox)

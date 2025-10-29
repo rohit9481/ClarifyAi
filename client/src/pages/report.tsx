@@ -23,25 +23,25 @@ export default function Report() {
   const retestMutation = useMutation({
     mutationFn: async () => {
       const guestSessionId = localStorage.getItem("guestSessionId");
+      const conceptIds = weakConcepts.map((concept: any) => concept.id);
       
-      // Generate new questions for all weak concepts
-      const questionGenerationPromises = weakConcepts.map((concept: any) =>
-        apiRequest("POST", `/api/concepts/${concept.id}/generate-questions`, { guestSessionId })
-      );
+      // Generate new questions for all weak concepts in a single request
+      const response = await apiRequest("POST", "/api/generate-retest-questions", {
+        conceptIds,
+        guestSessionId,
+      });
       
-      await Promise.all(questionGenerationPromises);
-      
-      // The new questions are now in the database, quiz will automatically pick them up
-      return { success: true };
+      const result = await response.json();
+      return { quizSessionId: result.quizSessionId };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "New Questions Generated!",
         description: "Ready to re-test your weak concepts with fresh questions.",
       });
-      // Redirect to quiz with the same PDF
+      // Redirect to the new quiz session
       setTimeout(() => {
-        setLocation(`/quiz/${reportData.pdfId}`);
+        setLocation(`/quiz/${data.quizSessionId}`);
       }, 1500);
     },
     onError: (error) => {

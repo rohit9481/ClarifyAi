@@ -99,6 +99,7 @@ export const quizSessions = pgTable("quiz_sessions", {
   guestSessionId: varchar("guest_session_id"), // for guest users
   totalQuestions: integer("total_questions").notNull(),
   correctAnswers: integer("correct_answers").notNull().default(0),
+  questionIds: text("question_ids").array(), // specific questions for this session (null = use all questions from PDF)
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

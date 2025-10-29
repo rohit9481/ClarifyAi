@@ -29,16 +29,46 @@ export default function Quiz() {
     explanation: string;
   }>>([]);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [isSessionBased, setIsSessionBased] = useState<boolean | null>(null);
 
-  // Fetch questions for this PDF (with spaced repetition)
+  // Check if pdfId is a quiz session by attempting to fetch it
+  useEffect(() => {
+    if (!pdfId || isSessionBased !== null) return;
+    
+    const checkIfSession = async () => {
+      try {
+        const response = await fetch(`/api/quiz-sessions/${pdfId}/questions?guestSessionId=${guestSessionId}`, {
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          // It's a valid quiz session
+          setIsSessionBased(true);
+          setQuizSessionId(pdfId);
+        } else {
+          // It's a PDF ID
+          setIsSessionBased(false);
+        }
+      } catch (error) {
+        // Error means it's probably a PDF ID
+        setIsSessionBased(false);
+      }
+    };
+    
+    checkIfSession();
+  }, [pdfId, isSessionBased, guestSessionId]);
+
+  // Fetch questions - either by session ID or PDF ID
   const { data: questions, isLoading } = useQuery<QuestionWithConcept[]>({
-    queryKey: ["/api/questions", pdfId, isAuthenticated ? "" : `?guestSessionId=${guestSessionId}`],
-    enabled: !!pdfId,
+    queryKey: isSessionBased 
+      ? ["/api/quiz-sessions", pdfId, "questions", isAuthenticated ? "" : `?guestSessionId=${guestSessionId}`]
+      : ["/api/questions", pdfId, isAuthenticated ? "" : `?guestSessionId=${guestSessionId}`],
+    enabled: !!pdfId && isSessionBased !== null,
   });
 
-  // Create quiz session
+  // Create new session for PDF-based quizzes
   useEffect(() => {
-    if (questions && questions.length > 0 && !quizSessionId) {
+    if (isSessionBased === false && questions && questions.length > 0 && !quizSessionId) {
       const createSession = async () => {
         try {
           console.log("Creating quiz session for pdfId:", pdfId, "guestSessionId:", guestSessionId);
@@ -63,7 +93,7 @@ export default function Quiz() {
       };
       createSession();
     }
-  }, [questions, pdfId, quizSessionId, isAuthenticated, guestSessionId, toast]);
+  }, [questions, pdfId, quizSessionId, isAuthenticated, guestSessionId, toast, isSessionBased]);
 
   const submitAnswerMutation = useMutation<Answer, Error, { questionId: string; userAnswer: number }>({
     mutationFn: async ({ questionId, userAnswer }): Promise<Answer> => {
