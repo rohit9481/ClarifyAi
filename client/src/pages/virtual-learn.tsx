@@ -4,12 +4,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Volume2, Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react";
+import { Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { SpeakingAvatar } from "@/components/speaking-avatar";
+import { HeyGenAvatar } from "@/components/heygen-avatar";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
@@ -26,7 +26,12 @@ export default function VirtualLearn() {
   const recognitionRef = useRef<any>(null);
 
   // Get concept details
-  const { data: concept, isLoading } = useQuery({
+  const { data: concept, isLoading } = useQuery<{
+    id: string;
+    conceptName: string;
+    conceptDescription: string;
+    pdfId: string;
+  }>({
     queryKey: ["/api/concepts", conceptId],
     enabled: !!conceptId,
   });
@@ -100,10 +105,7 @@ export default function VirtualLearn() {
     }
   }, [concept, currentExplanation]);
 
-  const speakText = (text: string) => {
-    // Update the current explanation so avatar shows the right text
-    setCurrentExplanation(text);
-    
+  const speakWithWebSpeechAPI = (text: string) => {
     if (!('speechSynthesis' in window)) {
       return;
     }
@@ -131,6 +133,18 @@ export default function VirtualLearn() {
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const speakText = (text: string) => {
+    // Update the current explanation
+    setCurrentExplanation(text);
+    
+    // Use HeyGen avatar if available, otherwise fallback to Web Speech API
+    if ((window as any).heygenSpeak) {
+      (window as any).heygenSpeak(text);
+    } else {
+      speakWithWebSpeechAPI(text);
+    }
   };
 
   const handleVoiceInput = () => {
@@ -216,13 +230,14 @@ export default function VirtualLearn() {
         </div>
 
         {/* AI Tutor Avatar */}
-        <Card className={cn(
-          "p-8 transition-all duration-300",
-          isSpeaking && "border-primary shadow-lg shadow-primary/20"
-        )}>
-          <SpeakingAvatar 
-            isSpeaking={isSpeaking}
-            text={currentExplanation}
+        <Card className="p-6">
+          <HeyGenAvatar 
+            onAvatarReady={() => {
+              console.log("Avatar ready for teaching");
+            }}
+            onSpeakingStart={() => setIsSpeaking(true)}
+            onSpeakingEnd={() => setIsSpeaking(false)}
+            fallbackSpeak={speakWithWebSpeechAPI}
           />
         </Card>
 

@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Generate new questions using Gemini
         const conceptText = `Concept: ${concept.conceptName}\nDescription: ${concept.conceptDescription}\n\nContext from document:\n${pdf.extractedText.substring(0, 2000)}`;
-        const newQuestions = await extractConceptsAndQuestions(conceptText, 1);
+        const newQuestions = await extractConceptsAndQuestions(conceptText);
 
         if (newQuestions.length > 0 && newQuestions[0].questions.length > 0) {
           // Store the new questions
@@ -475,6 +475,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // HeyGen Avatar endpoints
+  app.get("/api/heygen/token", async (req, res) => {
+    try {
+      const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY || "";
+      
+      if (!HEYGEN_API_KEY) {
+        return res.status(400).json({ message: "HeyGen API key not configured" });
+      }
+
+      // Get access token from HeyGen
+      const response = await fetch("https://api.heygen.com/v1/streaming.create_token", {
+        method: "POST",
+        headers: {
+          "X-Api-Key": HEYGEN_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get token: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json({ token: data.data.token });
+    } catch (error) {
+      console.error("Error getting HeyGen token:", error);
+      res.status(500).json({ message: "Failed to get access token" });
+    }
+  });
+
   app.post("/api/heygen/create-session", async (req, res) => {
     try {
       const sessionData = await createAvatarSession();
