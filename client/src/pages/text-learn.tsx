@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -10,17 +10,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+interface Message {
+  role: 'assistant' | 'user';
+  content: string;
+  displayedContent?: string; // For progressive rendering
+}
+
 export default function TextLearn() {
   const { sessionId, conceptId } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  const [chatHistory, setChatHistory] = useState<Array<{role: string, content: string}>>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [userQuestion, setUserQuestion] = useState("");
+  const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get concept details
   const { data: concept, isLoading } = useQuery({
     queryKey: ["/api/concepts", conceptId],
+    enabled: !!conceptId,
+  });
+
+  // Get initial explanation
+  const { data: initialData, isLoading: isLoadingExplanation } = useQuery({
+    queryKey: ["/api/concepts", conceptId, "initial-explanation"],
     enabled: !!conceptId,
   });
 
@@ -35,32 +49,78 @@ export default function TextLearn() {
     },
     onSuccess: (data: any) => {
       const answer = data?.answer || "I'm sorry, I couldn't generate a response. Please try asking again.";
-      setChatHistory(prev => [...prev, {role: 'assistant', content: answer}]);
+      const newMessage: Message = { role: 'assistant', content: answer, displayedContent: '' };
+      setMessages(prev => [...prev, newMessage]);
       setUserQuestion("");
+      setIsLoadingResponse(false);
+      renderTextProgressively(answer, messages.length);
     },
     onError: (error: any) => {
       console.error("Error asking question:", error);
-      setChatHistory(prev => [...prev, {
+      const errorMsg: Message = {
         role: 'assistant',
-        content: "I'm sorry, I encountered an error. Please try again."
-      }]);
+        content: "I'm sorry, I encountered an error. Please try again.",
+        displayedContent: "I'm sorry, I encountered an error. Please try again."
+      };
+      setMessages(prev => [...prev, errorMsg]);
       setUserQuestion("");
+      setIsLoadingResponse(false);
     },
   });
 
-  // Initial explanation when concept loads
+  // Load initial explanation when available
   useEffect(() => {
-    if (concept && chatHistory.length === 0) {
-      const initialExplanation = `Let me explain ${concept.conceptName}. ${concept.conceptDescription}`;
-      setChatHistory([{role: 'assistant', content: initialExplanation}]);
+    const data = initialData as any;
+    if (data?.explanation && messages.length === 0) {
+      const welcomeMessage: Message = {
+        role: 'assistant',
+        content: data.explanation,
+        displayedContent: ''
+      };
+      setMessages([welcomeMessage]);
+      renderTextProgressively(data.explanation, 0);
     }
-  }, [concept, chatHistory.length]);
+  }, [initialData, messages.length]);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Progressive text rendering - word by word
+  const renderTextProgressively = (text: string, messageIndex: number) => {
+    const words = text.split(' ');
+    let wordIndex = 0;
+    const wordsPerUpdate = 3; // Show 3 words at a time for smooth reading
+    
+    const interval = setInterval(() => {
+      if (wordIndex < words.length) {
+        const displayedWords = words.slice(0, wordIndex + wordsPerUpdate).join(' ');
+        setMessages(prev => prev.map((msg, idx) =>
+          idx === messageIndex ? { ...msg, displayedContent: displayedWords } : msg
+        ));
+        wordIndex += wordsPerUpdate;
+      } else {
+        clearInterval(interval);
+        // Ensure full text is displayed
+        setMessages(prev => prev.map((msg, idx) =>
+          idx === messageIndex ? { ...msg, displayedContent: msg.content } : msg
+        ));
+      }
+    }, 200); // Show new words every 200ms
+  };
 
   const handleAskQuestion = () => {
     if (!userQuestion.trim()) return;
 
-    setChatHistory(prev => [...prev, {role: 'user', content: userQuestion}]);
-    askQuestionMutation.mutate(userQuestion);
+    const userMessage: Message = {
+      role: 'user',
+      content: userQuestion.trim(),
+      displayedContent: userQuestion.trim()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoadingResponse(true);
+    askQuestionMutation.mutate(userQuestion.trim());
   };
 
   const handleClearConcept = async () => {
@@ -86,7 +146,7 @@ export default function TextLearn() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingExplanation) {
     return (
       <div className="min-h-screen p-8">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -118,7 +178,7 @@ export default function TextLearn() {
             Back
           </Button>
           <h1 className="font-heading text-2xl font-semibold" data-testid="heading-concept-name">
-            {concept.conceptName}
+            {(concept as any)?.conceptName}
           </h1>
           <div className="w-20" /> {/* Spacer for alignment */}
         </div>
@@ -126,13 +186,13 @@ export default function TextLearn() {
         {/* Chat Interface */}
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-5 w-5 text-blue-500" />
+            <MessageSquare className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Interactive Learning Chat</h3>
           </div>
           
           {/* Chat History */}
           <div className="space-y-4 max-h-96 overflow-y-auto mb-6" data-testid="chat-history">
-            {chatHistory.map((msg, idx) => (
+            {messages.map((msg, idx) => (
               <div
                 key={idx}
                 className={cn(
@@ -146,9 +206,22 @@ export default function TextLearn() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   {msg.role === 'user' ? 'You' : 'AI Tutor'}
                 </p>
-                <p className="leading-relaxed">{msg.content}</p>
+                <p className="leading-relaxed whitespace-pre-wrap">
+                  {msg.displayedContent || msg.content}
+                </p>
               </div>
             ))}
+            {isLoadingResponse && (
+              <div className="bg-muted mr-8 p-4 rounded-lg">
+                <p className="text-sm font-medium text-muted-foreground mb-2">AI Tutor</p>
+                <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Question Input */}
@@ -168,12 +241,12 @@ export default function TextLearn() {
             />
             <Button
               onClick={handleAskQuestion}
-              disabled={!userQuestion.trim() || askQuestionMutation.isPending}
+              disabled={!userQuestion.trim() || isLoadingResponse}
               className="w-full"
               data-testid="button-send-question"
             >
               <Send className="h-4 w-4 mr-2" />
-              {askQuestionMutation.isPending ? "Getting answer..." : "Send Question"}
+              {isLoadingResponse ? "Getting answer..." : "Send Question"}
             </Button>
           </div>
         </Card>
@@ -182,7 +255,7 @@ export default function TextLearn() {
         <Card className="p-6 bg-muted/50">
           <h3 className="font-semibold mb-2">Concept Summary</h3>
           <p className="text-muted-foreground leading-relaxed">
-            {concept.conceptDescription}
+            {(concept as any)?.conceptDescription}
           </p>
         </Card>
 
