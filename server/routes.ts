@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { setupAuth, isAuthenticated } from "./auth.js";
 import multer from "multer";
-import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer, generateInitialLesson } from "./gemini.js";
+import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer } from "./gemini.js";
 import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
 import { createRequire } from "module";
 import mammoth from "mammoth";
@@ -249,30 +249,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ask question about concept
   app.post("/api/ask-concept-question", async (req, res) => {
     try {
-      const { conceptId, question, mode } = req.body;
+      const { conceptId, question } = req.body;
       
       const concept = await storage.getConcept(conceptId);
       if (!concept) {
         return res.status(404).json({ message: "Concept not found" });
       }
 
-      // Generate answer using Gemini based on mode
-      let answer: string;
-      
-      if (mode === "lesson") {
-        // Initial teaching explanation with examples
-        answer = await generateInitialLesson(
-          concept.conceptName,
-          concept.conceptDescription
-        );
-      } else {
-        // Follow-up Q&A with examples
-        answer = await generateConceptAnswer(
-          concept.conceptName,
-          concept.conceptDescription,
-          question || ""
-        );
-      }
+      // Generate answer using Gemini
+      const answer = await generateConceptAnswer(
+        concept.conceptName,
+        concept.conceptDescription,
+        question
+      );
       
       res.json({ answer });
     } catch (error) {

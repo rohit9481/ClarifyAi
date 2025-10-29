@@ -142,43 +142,6 @@ Keep it conversational, supportive, and under 100 words.`;
   }
 }
 
-// Generate initial detailed lesson when user first clicks "Teach Me"
-export async function generateInitialLesson(
-  conceptName: string,
-  conceptDescription: string
-): Promise<string> {
-  try {
-    const prompt = `You are a warm, friendly AI tutor. A student just got questions wrong about "${conceptName}" and needs to learn this concept from scratch.
-
-Concept: ${conceptDescription}
-
-Provide a comprehensive, beginner-friendly lesson that:
-
-1. **Start with a simple definition**: Explain what ${conceptName} is in the simplest possible terms, like you're talking to someone who's never heard of it.
-
-2. **Break it down step-by-step**: Explain 3 key aspects or steps in plain language. Use short sentences and simple words.
-
-3. **Give 2 relatable real-world examples or analogies**: Make it interesting! Use everyday situations, metaphors, or analogies that help the concept click. Be creative and engaging.
-
-4. **End with encouragement**: Let them know this concept is learnable and you're here to help.
-
-Use a conversational, warm tone. Speak directly to the student using "you" and "let's". Make it feel like a friendly conversation, not a textbook.
-
-Length: 150-250 words (enough to be thorough but not overwhelming).`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-    
-    return response.text || `Let's learn about ${conceptName} together! ${conceptDescription} This is an important concept, and I'm here to help you understand it step by step.`;
-  } catch (error) {
-    console.error("Gemini lesson generation error:", error);
-    return `Let's explore ${conceptName} together! ${conceptDescription} Don't worry - we'll break this down into simple pieces and you'll understand it in no time!`;
-  }
-}
-
-// Answer follow-up questions with examples
 export async function generateConceptAnswer(
   conceptName: string,
   conceptDescription: string,
@@ -187,20 +150,18 @@ export async function generateConceptAnswer(
   try {
     const prompt = `You are a warm, supportive AI tutor helping a student learn about: ${conceptName}
 
-Concept: ${conceptDescription}
+Concept Description: ${conceptDescription}
 
 The student asks: "${studentQuestion}"
 
 Provide a clear, helpful answer that:
-1. **Directly addresses their question** in simple language
-2. **Briefly reminds them of the core concept** (1 sentence)
-3. **Gives at least one concrete example** to illustrate your answer
-4. **Uses analogies or real-world connections** when helpful
-5. **Stays warm and encouraging** in tone
+1. Directly addresses their question
+2. Uses simple, easy-to-understand language
+3. Includes relevant examples when helpful
+4. Encourages further learning
+5. Stays warm and supportive in tone
 
-Use "you" and "let's" to keep it conversational. Make it feel like a helpful friend explaining something, not a teacher lecturing.
-
-Length: 80-150 words (thorough but focused).`;
+Keep the answer concise but thorough (3-5 sentences).`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
