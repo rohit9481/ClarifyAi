@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { HeyGenAvatar } from "@/components/heygen-avatar";
+import { LocalAvatar } from "@/components/local-avatar";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
@@ -128,8 +128,21 @@ export default function VirtualLearn() {
     utterance.pitch = 1.1;
     utterance.volume = 1.0;
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      // Notify avatar to start mouth animation
+      if ((window as any).setAvatarSpeaking) {
+        (window as any).setAvatarSpeaking(true);
+      }
+    };
+    
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Notify avatar to stop mouth animation
+      if ((window as any).setAvatarSpeaking) {
+        (window as any).setAvatarSpeaking(false);
+      }
+    };
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
@@ -139,9 +152,9 @@ export default function VirtualLearn() {
     // Update the current explanation
     setCurrentExplanation(text);
     
-    // Use HeyGen avatar if available, otherwise fallback to Web Speech API
-    if ((window as any).heygenSpeak) {
-      (window as any).heygenSpeak(text);
+    // Use local avatar speak function
+    if ((window as any).avatarSpeak) {
+      (window as any).avatarSpeak(text);
     } else {
       speakWithWebSpeechAPI(text);
     }
@@ -231,7 +244,7 @@ export default function VirtualLearn() {
 
         {/* AI Tutor Avatar */}
         <Card className="p-6">
-          <HeyGenAvatar 
+          <LocalAvatar 
             onAvatarReady={() => {
               console.log("Avatar ready for teaching");
             }}

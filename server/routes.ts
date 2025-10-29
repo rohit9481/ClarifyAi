@@ -4,7 +4,6 @@ import { storage } from "./storage.js";
 import { setupAuth, isAuthenticated } from "./auth.js";
 import multer from "multer";
 import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer } from "./gemini.js";
-import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
 import { createRequire } from "module";
 import mammoth from "mammoth";
 
@@ -471,67 +470,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
-    }
-  });
-
-  // HeyGen Avatar endpoints
-  app.get("/api/heygen/token", async (req, res) => {
-    try {
-      const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY || "";
-      
-      if (!HEYGEN_API_KEY) {
-        return res.status(400).json({ message: "HeyGen API key not configured" });
-      }
-
-      // Get access token from HeyGen
-      const response = await fetch("https://api.heygen.com/v1/streaming.create_token", {
-        method: "POST",
-        headers: {
-          "X-Api-Key": HEYGEN_API_KEY,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get token: ${response.status}`);
-      }
-
-      const data = await response.json();
-      res.json({ token: data.data.token });
-    } catch (error) {
-      console.error("Error getting HeyGen token:", error);
-      res.status(500).json({ message: "Failed to get access token" });
-    }
-  });
-
-  app.post("/api/heygen/create-session", async (req, res) => {
-    try {
-      const sessionData = await createAvatarSession();
-      res.json(sessionData);
-    } catch (error) {
-      console.error("Error creating HeyGen session:", error);
-      res.status(500).json({ message: "Failed to create avatar session" });
-    }
-  });
-
-  app.post("/api/heygen/speak", async (req, res) => {
-    try {
-      const { sessionId, text } = req.body;
-      await makeAvatarSpeak(sessionId, text);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error making avatar speak:", error);
-      res.status(500).json({ message: "Failed to make avatar speak" });
-    }
-  });
-
-  app.post("/api/heygen/close-session", async (req, res) => {
-    try {
-      const { sessionId } = req.body;
-      await closeAvatarSession(sessionId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error closing HeyGen session:", error);
-      res.status(500).json({ message: "Failed to close avatar session" });
     }
   });
 
