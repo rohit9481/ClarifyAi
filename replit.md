@@ -66,10 +66,9 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `navbar.tsx` - Top navigation with auth state and theme toggle
 - `theme-toggle.tsx` - Dark/light mode switcher (sun/moon icon)
 - `theme-provider.tsx` - SSR-safe theme management with localStorage persistence
-- `speaking-avatar.tsx` - Animated avatar with synchronized visual feedback during speech
+- `heygen-avatar.tsx` - Real HeyGen streaming avatar with WebRTC video, lip-sync, and facial movements
 - `pdf-upload.tsx` - Drag-drop PDF uploader
 - `quiz-interface.tsx` - MCQ question display
-- `avatar-player.tsx` - HeyGen video player with explanations
 
 ## Design System
 
@@ -112,10 +111,11 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `GET /api/concepts/:id` - Get concept details by ID
 - `POST /api/ask-concept-question` - Ask Gemini a question about a concept (for teaching modes)
 
-### HeyGen Avatar (Future)
-- `POST /api/heygen/create-session` - Initialize avatar session
-- `POST /api/heygen/speak` - Make avatar speak text
-- `POST /api/heygen/close-session` - End avatar session
+### HeyGen Avatar
+- `GET /api/heygen/token` - Get HeyGen access token for SDK
+- `POST /api/heygen/create-session` - Initialize avatar session (legacy REST API)
+- `POST /api/heygen/speak` - Make avatar speak text (legacy REST API)
+- `POST /api/heygen/close-session` - End avatar session (legacy REST API)
 
 ## Environment Variables
 - `DATABASE_URL` - Supabase connection string
@@ -210,12 +210,14 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Theme persists across navigation via localStorage
   - Smooth theme transitions throughout the application
   - Theme toggle button (sun/moon icon) in navbar
-- ✅ **SpeakingAvatar Visual Component**
-  - Created animated avatar component with synchronized visual feedback
-  - Pulsing animations and visual cues during speech synthesis
-  - Displays current explanation text in real-time
-  - Integrated into virtual-learn page for enhanced teaching experience
-  - Avatar text updates with each new response for synchronized narration
+- ✅ **HeyGen Streaming Avatar with Lip-Sync**
+  - Real video avatar using HeyGen SDK with WebRTC streaming
+  - Professional female avatar (Anna) with realistic facial movements
+  - Synchronized lip movement during speech
+  - Video controls for user interaction
+  - Automatic fallback to Web Speech API if HeyGen unavailable
+  - Graceful error handling with seamless audio continuity
+  - Integrated into virtual-learn page for immersive teaching experience
 - ✅ **Improved PDF Error Handling**
   - Better error messages for invalid PDF files
   - Returns 400 status with clear user-friendly message instead of 500 errors
@@ -236,10 +238,10 @@ The comprehensive AI tutor system is fully functional with:
 - **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching with detailed reports
 - **Session reports with charts** - Performance visualization, Q&A review, weak concept identification
 - **Interactive teaching modes** - Choice between Virtual (voice) and Text (chat) learning experiences
-- **Virtual Avatar Mode** - Real-time voice Q&A with animated speaking avatar and synchronized visual feedback
+- **Virtual Avatar Mode** - Real-time voice Q&A with **realistic video avatar featuring lip-sync and facial movements**
+- **HeyGen Streaming Avatar** - Professional female avatar with WebRTC video, realistic lip movement, and graceful fallback
 - **Text Learning Mode** - Chat-based conversational tutoring with Gemini AI
 - **Dark Mode** - SSR-safe theme switching with localStorage persistence
-- **Speaking Avatar** - Animated visual feedback during speech synthesis with real-time text updates
 - **Concept mastery tracking** - Mark concepts as "clear" with persistent database tracking
 - **Re-test with new questions** - Generate fresh questions for weak concepts via Gemini AI
 - **Audio explanations** - Browser text-to-speech with warm, friendly voice
