@@ -40,7 +40,8 @@ Not specified.
 - **Responsive Design**: All frontend components are built with responsiveness in mind.
 - **SSR-Safe Theming**: Implemented light/dark mode with Server-Side Rendering safety.
 - **Progressive Text Rendering**: Text appears word-by-word, synchronized with speech or at a readable pace in learning modes.
-- **Enhanced Gemini Prompts**: Tailored prompts for simpler, more detailed explanations with real-world examples.
+- **Step-by-Step Teaching Structure**: AI explanations follow a strict order - (1) complete detailed explanation first, (2) then examples at the end, (3) invite questions. This helps students understand the full concept before seeing examples.
+- **Enhanced Gemini Prompts**: Tailored prompts for simpler, step-by-step explanations with real-world examples provided after the detailed explanation is complete.
 - **Robust Error Handling**: Improved error messages for invalid PDF files and graceful handling of edge cases.
 
 ## External Dependencies

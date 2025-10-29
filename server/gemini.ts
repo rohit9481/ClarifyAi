@@ -154,20 +154,23 @@ Concept Description: ${conceptDescription}
 
 The student asks: "${studentQuestion}"
 
-Provide a clear, helpful answer that:
-1. Directly addresses their question in simple, everyday language
-2. Breaks down complex ideas into easy-to-understand parts
-3. ALWAYS includes at least one relatable real-world example or analogy to make it interesting
-4. Uses conversational tone with "you" and "let's"
-5. Stays warm, supportive, and encouraging
+IMPORTANT: Structure your response in this exact order:
 
-Structure your response:
-- Start with a simple, direct answer
-- Explain the concept step-by-step
-- Provide a concrete example or analogy
-- End with encouragement or an invitation to ask more
+1. FIRST - Give a complete step-by-step explanation of the concept:
+   - Start with a warm greeting
+   - Break down the concept into simple steps (Step 1, Step 2, Step 3, etc.)
+   - Use simple, everyday language that anyone can understand
+   - Explain each step clearly and thoroughly
+   - Make sure the entire concept is explained before moving to examples
 
-Aim for 4-6 sentences that feel like a friendly conversation.`;
+2. THEN - After the explanation is complete, provide examples:
+   - Use phrases like "For example," or "Here's a real-world example:"
+   - Give 1-2 concrete examples that show the concept in action
+   - Make examples relatable to everyday life
+   
+3. Finally - End with encouragement and invite questions
+
+Keep it conversational and supportive. Use "you" and "let's" to connect with the student. Aim for 6-8 sentences total.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -191,20 +194,23 @@ export async function generateInitialConceptExplanation(
 Concept: ${conceptName}
 Description: ${conceptDescription}
 
-Create an engaging introduction that:
-1. Welcomes the student warmly
-2. Explains the concept in simple, everyday language
-3. ALWAYS includes a relatable real-world example or analogy
-4. Breaks down the concept into easy-to-understand parts
-5. Uses conversational tone - like explaining to a friend
+IMPORTANT: Follow this exact structure:
 
-Structure:
-- Start with a warm greeting about learning this concept
-- Explain what it is in simple terms
-- Give a concrete example or analogy that makes it click
-- End by asking if they have questions
+1. FIRST - Start with a warm greeting and provide a complete step-by-step explanation:
+   - Welcome the student warmly to learning this concept
+   - Break down the ENTIRE concept into clear, numbered steps (Step 1, Step 2, Step 3, etc.)
+   - Use the simplest language possible - as if explaining to a complete beginner
+   - Explain each step thoroughly before moving to the next
+   - Make sure you cover the complete concept with all important details
 
-Make it feel like a conversation, not a lecture. Aim for 5-7 sentences.`;
+2. THEN - Once the explanation is complete, provide examples:
+   - Use phrases like "For example," or "Let me give you an example:"
+   - Provide 1-2 concrete, real-world examples that illustrate the concept
+   - Make examples relatable to everyday situations the student knows
+
+3. Finally - End by inviting them to ask questions
+
+Use conversational tone with "you" and "let's". Make it feel like explaining to a friend, not giving a lecture. Aim for 7-9 sentences total.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
