@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { SpeakingAvatar } from "@/components/speaking-avatar";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
@@ -100,6 +101,9 @@ export default function VirtualLearn() {
   }, [concept, currentExplanation]);
 
   const speakText = (text: string) => {
+    // Update the current explanation so avatar shows the right text
+    setCurrentExplanation(text);
+    
     if (!('speechSynthesis' in window)) {
       return;
     }
@@ -211,28 +215,15 @@ export default function VirtualLearn() {
           <div className="w-20" /> {/* Spacer for alignment */}
         </div>
 
-        {/* Avatar Visual */}
+        {/* AI Tutor Avatar */}
         <Card className={cn(
           "p-8 transition-all duration-300",
           isSpeaking && "border-primary shadow-lg shadow-primary/20"
         )}>
-          <div className="flex items-center justify-center">
-            <div className={cn(
-              "relative w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center transition-all",
-              isSpeaking && "scale-110"
-            )}>
-              <Volume2 className={cn(
-                "h-16 w-16 text-primary transition-all",
-                isSpeaking && "animate-pulse"
-              )} />
-              {isSpeaking && (
-                <div className="absolute inset-0 rounded-full border-4 border-primary animate-ping opacity-30" />
-              )}
-            </div>
-          </div>
-          <p className="text-center mt-4 text-muted-foreground" data-testid="text-avatar-status">
-            {isSpeaking ? "Speaking..." : "Ready to answer your questions"}
-          </p>
+          <SpeakingAvatar 
+            isSpeaking={isSpeaking}
+            text={currentExplanation}
+          />
         </Card>
 
         {/* Chat History */}
