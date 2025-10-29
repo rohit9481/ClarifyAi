@@ -1,17 +1,22 @@
-// HeyGen Avatar API integration
+// HeyGen API integration for real-time avatar lip-sync
 const HEYGEN_API_KEY = process.env.HEYGEN_API_KEY || "";
 
 interface SessionData {
   sessionId: string;
-  streamUrl?: string;
+  url?: string;
+  accessToken?: string;
 }
 
 export async function createAvatarSession(): Promise<SessionData> {
   try {
-    // Note: Actual HeyGen API integration
-    // This is a placeholder for the HeyGen streaming avatar session creation
-    // In production, you would call HeyGen's actual API endpoints
-    
+    if (!HEYGEN_API_KEY) {
+      console.warn("HEYGEN_API_KEY not set, using mock session");
+      return {
+        sessionId: `mock-session-${Date.now()}`,
+      };
+    }
+
+    // Create streaming session using HeyGen REST API
     const response = await fetch("https://api.heygen.com/v1/streaming.new", {
       method: "POST",
       headers: {
@@ -20,31 +25,34 @@ export async function createAvatarSession(): Promise<SessionData> {
       },
       body: JSON.stringify({
         quality: "high",
-        avatar_name: "default", // Use default avatar or specify from user's settings
+        avatar_name: "Wayne_20240711",
         voice: {
-          voice_id: "en-US-Neural2-A", // Warm, friendly voice
+          voice_id: "en-US-JennyNeural",
+          rate: 0.9,
         },
+        language: "en",
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("HeyGen API error response:", response.status, errorText);
-      throw new Error(`Failed to create HeyGen session: ${response.status} - ${errorText}`);
+      console.error("HeyGen API error:", response.status, errorText);
+      throw new Error(`Failed to create session: ${response.status}`);
     }
 
     const data = await response.json();
     
+    console.log("HeyGen avatar session created:", data.session_id);
+
     return {
       sessionId: data.session_id,
-      streamUrl: data.stream_url,
+      url: data.url,
+      accessToken: data.access_token,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("HeyGen session creation error:", error);
-    // Return mock session for development/fallback
     return {
       sessionId: `mock-session-${Date.now()}`,
-      streamUrl: undefined,
     };
   }
 }
@@ -54,6 +62,11 @@ export async function makeAvatarSpeak(
   text: string
 ): Promise<void> {
   try {
+    if (sessionId.startsWith("mock-")) {
+      console.log("Mock session - skipping HeyGen speak");
+      return;
+    }
+
     const response = await fetch("https://api.heygen.com/v1/streaming.task", {
       method: "POST",
       headers: {
@@ -63,22 +76,27 @@ export async function makeAvatarSpeak(
       body: JSON.stringify({
         session_id: sessionId,
         text: text,
+        task_type: "talk",
       }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("HeyGen speak API error response:", response.status, errorText);
-      throw new Error(`Failed to make avatar speak: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to make avatar speak: ${response.status}`);
     }
-  } catch (error) {
+
+    console.log("Avatar speaking:", text.substring(0, 50) + "...");
+  } catch (error: any) {
     console.error("HeyGen speak error:", error);
-    // Silently fail for development - avatar player will show text explanation
   }
 }
 
 export async function closeAvatarSession(sessionId: string): Promise<void> {
   try {
+    if (sessionId.startsWith("mock-")) {
+      console.log("Mock session - skipping HeyGen close");
+      return;
+    }
+
     const response = await fetch("https://api.heygen.com/v1/streaming.stop", {
       method: "POST",
       headers: {
@@ -91,10 +109,11 @@ export async function closeAvatarSession(sessionId: string): Promise<void> {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to close HeyGen session");
+      throw new Error("Failed to close session");
     }
-  } catch (error) {
+
+    console.log("HeyGen avatar session closed:", sessionId);
+  } catch (error: any) {
     console.error("HeyGen session close error:", error);
-    // Silently fail
   }
 }
