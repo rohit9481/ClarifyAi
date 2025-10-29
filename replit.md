@@ -63,9 +63,10 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `dashboard.tsx` - Progress tracking (available to all users)
 
 ### Shared Components
-- `navbar.tsx` - Top navigation with auth state
-- `theme-toggle.tsx` - Dark/light mode switcher
-- `theme-provider.tsx` - Theme management
+- `navbar.tsx` - Top navigation with auth state and theme toggle
+- `theme-toggle.tsx` - Dark/light mode switcher (sun/moon icon)
+- `theme-provider.tsx` - SSR-safe theme management with localStorage persistence
+- `speaking-avatar.tsx` - Animated avatar with synchronized visual feedback during speech
 - `pdf-upload.tsx` - Drag-drop PDF uploader
 - `quiz-interface.tsx` - MCQ question display
 - `avatar-player.tsx` - HeyGen video player with explanations
@@ -203,6 +204,22 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Gemini-powered conversational tutoring
   - Message history with user/assistant distinction
   - Send button for submitting questions
+- ✅ **Enhanced Dark Mode with SSR Safety**
+  - ThemeProvider uses lazy useState initialization to prevent SSR/test environment errors
+  - Guards for window/localStorage access ensure build-time and runtime safety
+  - Theme persists across navigation via localStorage
+  - Smooth theme transitions throughout the application
+  - Theme toggle button (sun/moon icon) in navbar
+- ✅ **SpeakingAvatar Visual Component**
+  - Created animated avatar component with synchronized visual feedback
+  - Pulsing animations and visual cues during speech synthesis
+  - Displays current explanation text in real-time
+  - Integrated into virtual-learn page for enhanced teaching experience
+  - Avatar text updates with each new response for synchronized narration
+- ✅ **Improved PDF Error Handling**
+  - Better error messages for invalid PDF files
+  - Returns 400 status with clear user-friendly message instead of 500 errors
+  - Graceful handling of edge-case PDFs that can't be parsed
 
 ## Implementation Status
 - **Frontend**: Complete with landing, upload, quiz, review, dashboard, and navbar
@@ -219,8 +236,10 @@ The comprehensive AI tutor system is fully functional with:
 - **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching with detailed reports
 - **Session reports with charts** - Performance visualization, Q&A review, weak concept identification
 - **Interactive teaching modes** - Choice between Virtual (voice) and Text (chat) learning experiences
-- **Virtual Avatar Mode** - Real-time voice Q&A using Web Speech API with Gemini-powered answers
+- **Virtual Avatar Mode** - Real-time voice Q&A with animated speaking avatar and synchronized visual feedback
 - **Text Learning Mode** - Chat-based conversational tutoring with Gemini AI
+- **Dark Mode** - SSR-safe theme switching with localStorage persistence
+- **Speaking Avatar** - Animated visual feedback during speech synthesis with real-time text updates
 - **Concept mastery tracking** - Mark concepts as "clear" with persistent database tracking
 - **Re-test with new questions** - Generate fresh questions for weak concepts via Gemini AI
 - **Audio explanations** - Browser text-to-speech with warm, friendly voice
