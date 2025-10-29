@@ -4,12 +4,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react";
+import { Volume2, Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { LocalAvatar } from "@/components/local-avatar";
+import { SpeakingAvatar } from "@/components/speaking-avatar";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
@@ -26,12 +26,7 @@ export default function VirtualLearn() {
   const recognitionRef = useRef<any>(null);
 
   // Get concept details
-  const { data: concept, isLoading } = useQuery<{
-    id: string;
-    conceptName: string;
-    conceptDescription: string;
-    pdfId: string;
-  }>({
+  const { data: concept, isLoading } = useQuery({
     queryKey: ["/api/concepts", conceptId],
     enabled: !!conceptId,
   });
@@ -105,7 +100,10 @@ export default function VirtualLearn() {
     }
   }, [concept, currentExplanation]);
 
-  const speakWithWebSpeechAPI = (text: string) => {
+  const speakText = (text: string) => {
+    // Update the current explanation so avatar shows the right text
+    setCurrentExplanation(text);
+    
     if (!('speechSynthesis' in window)) {
       return;
     }
@@ -128,36 +126,11 @@ export default function VirtualLearn() {
     utterance.pitch = 1.1;
     utterance.volume = 1.0;
 
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      // Notify avatar to start mouth animation
-      if ((window as any).setAvatarSpeaking) {
-        (window as any).setAvatarSpeaking(true);
-      }
-    };
-    
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      // Notify avatar to stop mouth animation
-      if ((window as any).setAvatarSpeaking) {
-        (window as any).setAvatarSpeaking(false);
-      }
-    };
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  };
-
-  const speakText = (text: string) => {
-    // Update the current explanation
-    setCurrentExplanation(text);
-    
-    // Use local avatar speak function
-    if ((window as any).avatarSpeak) {
-      (window as any).avatarSpeak(text);
-    } else {
-      speakWithWebSpeechAPI(text);
-    }
   };
 
   const handleVoiceInput = () => {
@@ -243,14 +216,13 @@ export default function VirtualLearn() {
         </div>
 
         {/* AI Tutor Avatar */}
-        <Card className="p-6">
-          <LocalAvatar 
-            onAvatarReady={() => {
-              console.log("Avatar ready for teaching");
-            }}
-            onSpeakingStart={() => setIsSpeaking(true)}
-            onSpeakingEnd={() => setIsSpeaking(false)}
-            fallbackSpeak={speakWithWebSpeechAPI}
+        <Card className={cn(
+          "p-8 transition-all duration-300",
+          isSpeaking && "border-primary shadow-lg shadow-primary/20"
+        )}>
+          <SpeakingAvatar 
+            isSpeaking={isSpeaking}
+            text={currentExplanation}
           />
         </Card>
 
