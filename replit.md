@@ -66,7 +66,7 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `navbar.tsx` - Top navigation with auth state and theme toggle
 - `theme-toggle.tsx` - Dark/light mode switcher (sun/moon icon)
 - `theme-provider.tsx` - SSR-safe theme management with localStorage persistence
-- `heygen-avatar.tsx` - Real HeyGen streaming avatar with WebRTC video, lip-sync, and facial movements
+- `local-avatar.tsx` - FREE local 2D Canvas-based avatar with lip-sync animations (no API keys required)
 - `pdf-upload.tsx` - Drag-drop PDF uploader
 - `quiz-interface.tsx` - MCQ question display
 
@@ -111,16 +111,9 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
 - `GET /api/concepts/:id` - Get concept details by ID
 - `POST /api/ask-concept-question` - Ask Gemini a question about a concept (for teaching modes)
 
-### HeyGen Avatar
-- `GET /api/heygen/token` - Get HeyGen access token for SDK
-- `POST /api/heygen/create-session` - Initialize avatar session (legacy REST API)
-- `POST /api/heygen/speak` - Make avatar speak text (legacy REST API)
-- `POST /api/heygen/close-session` - End avatar session (legacy REST API)
-
 ## Environment Variables
 - `DATABASE_URL` - Supabase connection string
 - `GEMINI_API_KEY` - Google Gemini API key
-- `HEYGEN_API_KEY` - HeyGen API key
 - `SESSION_SECRET` - Session encryption (auto-provided by Replit)
 - `REPL_ID`, `REPLIT_DOMAINS`, `ISSUER_URL` - Replit Auth (auto-provided)
 
@@ -210,13 +203,13 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Theme persists across navigation via localStorage
   - Smooth theme transitions throughout the application
   - Theme toggle button (sun/moon icon) in navbar
-- ✅ **HeyGen Streaming Avatar with Lip-Sync**
-  - Real video avatar using HeyGen SDK with WebRTC streaming
-  - Professional female avatar (Anna) with realistic facial movements
-  - Synchronized lip movement during speech
-  - Video controls for user interaction
-  - Automatic fallback to Web Speech API if HeyGen unavailable
-  - Graceful error handling with seamless audio continuity
+- ✅ **FREE Local 2D Animated Avatar with Lip-Sync**
+  - Completely FREE Canvas-based animated avatar (no API keys or subscriptions required)
+  - Professional female character with friendly appearance
+  - Synchronized mouth animations driven by Web Speech API speaking state
+  - Blinking and subtle idle animations for realism
+  - Works offline and in downloaded/local deployments
+  - Zero external dependencies - runs entirely in browser
   - Integrated into virtual-learn page for immersive teaching experience
 - ✅ **Improved PDF Error Handling**
   - Better error messages for invalid PDF files
@@ -238,8 +231,8 @@ The comprehensive AI tutor system is fully functional with:
 - **Assessment-then-teaching pedagogical flow** - Quiz without hints, then targeted teaching with detailed reports
 - **Session reports with charts** - Performance visualization, Q&A review, weak concept identification
 - **Interactive teaching modes** - Choice between Virtual (voice) and Text (chat) learning experiences
-- **Virtual Avatar Mode** - Real-time voice Q&A with **realistic video avatar featuring lip-sync and facial movements**
-- **HeyGen Streaming Avatar** - Professional female avatar with WebRTC video, realistic lip movement, and graceful fallback
+- **Virtual Avatar Mode** - Real-time voice Q&A with **FREE animated avatar featuring lip-sync**
+- **Local 2D Animated Avatar** - Professional female character with Canvas-based rendering and mouth animations synced to speech
 - **Text Learning Mode** - Chat-based conversational tutoring with Gemini AI
 - **Dark Mode** - SSR-safe theme switching with localStorage persistence
 - **Concept mastery tracking** - Mark concepts as "clear" with persistent database tracking
@@ -251,11 +244,13 @@ The comprehensive AI tutor system is fully functional with:
 - **Dual authentication** - Google OAuth (for local) + Replit Auth (for Replit platform)
 - **Production-ready** - Proper error handling, graceful degradation, comprehensive documentation
 
-## Audio Implementation Notes
+## Audio & Avatar Implementation Notes
 - **Web Speech API** is used for text-to-speech (works in Chrome, Edge, Safari, Firefox)
-- **No API keys required** - Browser-native functionality
-- **Graceful degradation** - Virtual mode works even without speech support (text chat remains functional)
-- **Auto-plays** on review page with play/pause/replay controls
+- **No API keys required** - Browser-native functionality  
+- **Local 2D Canvas Avatar** - Completely FREE animated character with lip-sync
+- **Mouth animations** - Synced with Web Speech API speaking state (open/close cycle during speech)
+- **Blinking animations** - Natural blinking every ~3 seconds for realism
+- **Zero external dependencies** - Works offline and in local deployments
 - **Voice settings**: Rate 0.9 (clarity), Pitch 1.1 (friendliness), auto-selects warm voices
 
 ## Interactive Teaching Implementation
