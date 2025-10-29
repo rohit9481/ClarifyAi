@@ -3,17 +3,13 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Mic, CheckCircle, ArrowLeft, MessageSquare, User } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Volume2, Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-interface Message {
-  role: 'assistant' | 'user';
-  content: string;
-  displayedContent?: string; // For progressive rendering
-}
+import { SpeakingAvatar } from "@/components/speaking-avatar";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
@@ -21,24 +17,17 @@ export default function VirtualLearn() {
   const { toast } = useToast();
   
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState("");
+  const [chatHistory, setChatHistory] = useState<Array<{role: string, content: string}>>([]);
+  const [userQuestion, setUserQuestion] = useState("");
   
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const recognitionRef = useRef<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get concept details
   const { data: concept, isLoading } = useQuery({
     queryKey: ["/api/concepts", conceptId],
-    enabled: !!conceptId,
-  });
-
-  // Get initial explanation
-  const { data: initialData, isLoading: isLoadingExplanation } = useQuery({
-    queryKey: ["/api/concepts", conceptId, "initial-explanation"],
     enabled: !!conceptId,
   });
 
@@ -53,25 +42,26 @@ export default function VirtualLearn() {
     },
     onSuccess: (data: any) => {
       const answer = data?.answer || "I'm sorry, I couldn't generate a response. Please try asking again.";
-      const newMessage: Message = { role: 'assistant', content: answer, displayedContent: '' };
-      setMessages(prev => [...prev, newMessage]);
-      setIsLoadingResponse(false);
-      speakTextProgressively(answer, messages.length);
+      setChatHistory(prev => [...prev, {role: 'assistant', content: answer}]);
+      speakText(answer);
+      setUserQuestion("");
     },
     onError: (error: any) => {
       console.error("Error asking question:", error);
-      const errorMsg: Message = {
-        role: 'assistant',
-        content: "I'm sorry, I encountered an error. Please try again.",
-        displayedContent: "I'm sorry, I encountered an error. Please try again."
-      };
-      setMessages(prev => [...prev, errorMsg]);
-      setIsLoadingResponse(false);
+      setChatHistory(prev => [...prev, {
+        role: 'assistant', 
+        content: "I'm sorry, I encountered an error. Please try again."
+      }]);
+      setUserQuestion("");
     },
   });
 
   // Initialize speech synthesis and recognition
   useEffect(() => {
+    if (!('speechSynthesis' in window)) {
+      return;
+    }
+
     // Initialize speech recognition if available
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -81,15 +71,11 @@ export default function VirtualLearn() {
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        handleVoiceQuestion(transcript);
+        setUserQuestion(transcript);
         setIsListening(false);
       };
 
       recognitionRef.current.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
         setIsListening(false);
       };
     }
@@ -104,31 +90,21 @@ export default function VirtualLearn() {
     };
   }, []);
 
-  // Load initial explanation when available
+  // Initial explanation when concept loads
   useEffect(() => {
-    const data = initialData as any;
-    if (data?.explanation && messages.length === 0) {
-      const welcomeMessage: Message = {
-        role: 'assistant',
-        content: data.explanation,
-        displayedContent: ''
-      };
-      setMessages([welcomeMessage]);
-      speakTextProgressively(data.explanation, 0);
+    if (concept && !currentExplanation) {
+      const initialExplanation = `Let me explain ${concept.conceptName}. ${concept.conceptDescription}`;
+      setCurrentExplanation(initialExplanation);
+      setChatHistory([{role: 'assistant', content: initialExplanation}]);
+      speakText(initialExplanation);
     }
-  }, [initialData, messages.length]);
+  }, [concept, currentExplanation]);
 
-  // Auto-scroll to latest message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const speakTextProgressively = (text: string, messageIndex: number) => {
-    if (!('speechSynthesis' in window) || isMuted) {
-      // If speech is muted or not available, just show full text immediately
-      setMessages(prev => prev.map((msg, idx) =>
-        idx === messageIndex ? { ...msg, displayedContent: msg.content } : msg
-      ));
+  const speakText = (text: string) => {
+    // Update the current explanation so avatar shows the right text
+    setCurrentExplanation(text);
+    
+    if (!('speechSynthesis' in window)) {
       return;
     }
 
@@ -151,39 +127,7 @@ export default function VirtualLearn() {
     utterance.volume = 1.0;
 
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      // Ensure full text is displayed when speech ends
-      setMessages(prev => prev.map((msg, idx) =>
-        idx === messageIndex ? { ...msg, displayedContent: msg.content } : msg
-      ));
-    };
-
-    // Progressive text rendering - word by word
-    const words = text.split(' ');
-    let wordIndex = 0;
-    const wordsPerUpdate = 2; // Show 2 words at a time for smoother rendering
-    
-    const intervalTime = (utterance.rate * 400); // Adjust based on speech rate
-    const progressInterval = setInterval(() => {
-      if (wordIndex < words.length) {
-        const displayedWords = words.slice(0, wordIndex + wordsPerUpdate).join(' ');
-        setMessages(prev => prev.map((msg, idx) =>
-          idx === messageIndex ? { ...msg, displayedContent: displayedWords } : msg
-        ));
-        wordIndex += wordsPerUpdate;
-      } else {
-        clearInterval(progressInterval);
-      }
-    }, intervalTime);
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      clearInterval(progressInterval);
-      setMessages(prev => prev.map((msg, idx) =>
-        idx === messageIndex ? { ...msg, displayedContent: msg.content } : msg
-      ));
-    };
+    utterance.onend = () => setIsSpeaking(false);
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
@@ -204,25 +148,11 @@ export default function VirtualLearn() {
     }
   };
 
-  const handleVoiceQuestion = (question: string) => {
-    if (!question.trim()) return;
+  const handleAskQuestion = () => {
+    if (!userQuestion.trim()) return;
 
-    const userMessage: Message = {
-      role: 'user',
-      content: question,
-      displayedContent: question
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setIsLoadingResponse(true);
-    askQuestionMutation.mutate(question);
-  };
-
-  const toggleMute = () => {
-    if (isSpeaking && !isMuted) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-    setIsMuted(!isMuted);
+    setChatHistory(prev => [...prev, {role: 'user', content: userQuestion}]);
+    askQuestionMutation.mutate(userQuestion);
   };
 
   const handleClearConcept = async () => {
@@ -248,10 +178,12 @@ export default function VirtualLearn() {
     }
   };
 
-  if (isLoading || isLoadingExplanation) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Skeleton className="h-64 w-full max-w-4xl" />
+      <div className="min-h-screen p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }
@@ -265,10 +197,10 @@ export default function VirtualLearn() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+    <div className="min-h-screen p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => setLocation(`/teach-mode/${sessionId}/${conceptId}`)}
@@ -277,111 +209,92 @@ export default function VirtualLearn() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="font-heading text-xl font-semibold" data-testid="heading-concept-name">
-            {(concept as any)?.conceptName}
+          <h1 className="font-heading text-2xl font-semibold" data-testid="heading-concept-name">
+            {concept.conceptName}
           </h1>
-          <div className="w-20" />
+          <div className="w-20" /> {/* Spacer for alignment */}
         </div>
-      </div>
 
-      {/* Main Content - Two Column Layout */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 h-[calc(100vh-180px)]">
-          {/* Left Sidebar - Virtual Teacher */}
-          <Card className="p-6 flex flex-col items-center justify-between h-full">
-            <div className="flex flex-col items-center flex-1 justify-center space-y-6">
-              <h2 className="font-heading text-xl font-semibold">Virtual Teacher</h2>
-              
-              {/* Avatar */}
-              <div className={cn(
-                "relative w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center transition-all duration-300",
-                isSpeaking && "scale-110 shadow-lg shadow-purple-500/50"
-              )}>
-                <User className="h-16 w-16 text-white" />
-                {isSpeaking && (
-                  <div className="absolute inset-0 rounded-full border-4 border-purple-400 animate-ping opacity-30" />
+        {/* AI Tutor Avatar */}
+        <Card className={cn(
+          "p-8 transition-all duration-300",
+          isSpeaking && "border-primary shadow-lg shadow-primary/20"
+        )}>
+          <SpeakingAvatar 
+            isSpeaking={isSpeaking}
+            text={currentExplanation}
+          />
+        </Card>
+
+        {/* Chat History */}
+        <Card className="p-6">
+          <h3 className="font-semibold mb-4">Learning Session</h3>
+          <div className="space-y-4 max-h-80 overflow-y-auto" data-testid="chat-history">
+            {chatHistory.map((msg, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "p-4 rounded-lg",
+                  msg.role === 'user' 
+                    ? "bg-primary/10 ml-8" 
+                    : "bg-muted mr-8"
                 )}
+                data-testid={`message-${msg.role}-${idx}`}
+              >
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {msg.role === 'user' ? 'You' : 'Tutor'}
+                </p>
+                <p>{msg.content}</p>
               </div>
+            ))}
+          </div>
+        </Card>
 
-              {/* Mute Button */}
+        {/* Question Input */}
+        <Card className="p-6">
+          <h3 className="font-semibold mb-4">Ask a Question</h3>
+          <div className="flex gap-2">
+            <Textarea
+              value={userQuestion}
+              onChange={(e) => setUserQuestion(e.target.value)}
+              placeholder="Type your question or use voice..."
+              className="flex-1"
+              data-testid="input-question"
+            />
+            <div className="flex flex-col gap-2">
               <Button
                 size="icon"
                 variant="outline"
-                onClick={toggleMute}
-                data-testid="button-mute"
-                className="rounded-md"
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </Button>
-            </div>
-
-            {/* Voice Question Button */}
-            <div className="w-full space-y-3">
-              <Button
-                className="w-full"
-                variant="default"
                 onClick={handleVoiceInput}
-                disabled={isLoadingResponse}
+                className={cn(isListening && "bg-destructive text-destructive-foreground")}
                 data-testid="button-voice-input"
               >
-                <Mic className="h-4 w-4 mr-2" />
-                {isListening ? "Listening..." : "Ask Question (Voice)"}
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
-
               <Button
-                className="w-full"
-                variant="outline"
-                onClick={handleClearConcept}
-                data-testid="button-clear-concept"
+                size="icon"
+                onClick={handleAskQuestion}
+                disabled={!userQuestion.trim() || askQuestionMutation.isPending}
+                data-testid="button-send-question"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                I'm Clear
+                <Send className="h-4 w-4" />
               </Button>
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          {/* Right Panel - Learning Conversation */}
-          <Card className="p-6 flex flex-col h-full">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="font-heading text-xl font-semibold">Learning Conversation</h2>
-            </div>
-
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2" data-testid="chat-history">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "p-4 rounded-lg",
-                    message.role === 'user' 
-                      ? "bg-primary/10 ml-12" 
-                      : "bg-muted mr-12"
-                  )}
-                  data-testid={`message-${message.role}-${index}`}
-                >
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    {message.role === 'user' ? 'You' : 'AI Tutor'}
-                  </p>
-                  <p className="whitespace-pre-wrap">
-                    {message.displayedContent || message.content}
-                  </p>
-                </div>
-              ))}
-              {isLoadingResponse && (
-                <div className="bg-muted mr-12 p-4 rounded-lg">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">AI Tutor</p>
-                  <div className="flex gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </Card>
-        </div>
+        {/* Clear Button */}
+        <Card className="p-6">
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleClearConcept}
+            data-testid="button-clear-concept"
+          >
+            <CheckCircle className="h-5 w-5 mr-2" />
+            I'm Clear with this Concept
+          </Button>
+        </Card>
       </div>
     </div>
   );

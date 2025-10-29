@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { setupAuth, isAuthenticated } from "./auth.js";
 import multer from "multer";
-import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer, generateInitialConceptExplanation } from "./gemini.js";
+import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer } from "./gemini.js";
 import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
 import { createRequire } from "module";
 import mammoth from "mammoth";
@@ -243,29 +243,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating retest questions:", error);
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get initial concept explanation
-  app.get("/api/concepts/:id/initial-explanation", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const concept = await storage.getConcept(id);
-      
-      if (!concept) {
-        return res.status(404).json({ message: "Concept not found" });
-      }
-
-      // Generate initial explanation using Gemini
-      const explanation = await generateInitialConceptExplanation(
-        concept.conceptName,
-        concept.conceptDescription
-      );
-      
-      res.json({ explanation });
-    } catch (error) {
-      console.error("Error generating initial explanation:", error);
-      res.status(500).json({ message: "Failed to generate explanation" });
     }
   });
 
