@@ -8,10 +8,12 @@ import { Volume2, Mic, MicOff, Send, CheckCircle, ArrowLeft } from "lucide-react
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VirtualLearn() {
   const { sessionId, conceptId } = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -149,9 +151,27 @@ export default function VirtualLearn() {
     askQuestionMutation.mutate(userQuestion);
   };
 
-  const handleClearConcept = () => {
-    // Mark concept as mastered and return to report
-    setLocation(`/report/${sessionId}`);
+  const handleClearConcept = async () => {
+    try {
+      const guestSessionId = localStorage.getItem("guestSessionId");
+      await apiRequest("POST", `/api/concepts/${conceptId}/master`, {
+        guestSessionId,
+      });
+      
+      toast({
+        title: "Concept Mastered!",
+        description: "You've marked this concept as clear. Great work!",
+      });
+      setLocation(`/report/${sessionId}`);
+    } catch (error) {
+      console.error("Failed to mark concept as mastered:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save mastery status. Please try again.",
+        variant: "destructive",
+      });
+      setLocation(`/report/${sessionId}`);
+    }
   };
 
   if (isLoading) {

@@ -6,6 +6,7 @@ import {
   questions,
   quizSessions,
   answers,
+  conceptMastery,
   type User,
   type UpsertUser,
   type Pdf,
@@ -18,6 +19,8 @@ import {
   type InsertQuizSession,
   type Answer,
   type InsertAnswer,
+  type ConceptMastery,
+  type InsertConceptMastery,
   type QuestionWithConcept,
   type ConceptWithStats,
 } from "@shared/schema";
@@ -63,6 +66,11 @@ export interface IStorage {
   
   // Spaced repetition
   getPrioritizedQuestions(pdfId: string, userId?: string, guestSessionId?: string): Promise<QuestionWithConcept[]>;
+  
+  // Concept mastery
+  markConceptAsMastered(conceptId: string, userId?: string, guestSessionId?: string): Promise<ConceptMastery>;
+  isConceptMastered(conceptId: string, userId?: string, guestSessionId?: string): Promise<boolean>;
+  getMasteredConcepts(userId?: string, guestSessionId?: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -314,6 +322,63 @@ export class DatabaseStorage implements IStorage {
     });
 
     return prioritized;
+  }
+
+  // Concept mastery operations
+  async markConceptAsMastered(conceptId: string, userId?: string, guestSessionId?: string): Promise<ConceptMastery> {
+    // Check if already mastered
+    const existing = await db
+      .select()
+      .from(conceptMastery)
+      .where(
+        and(
+          eq(conceptMastery.conceptId, conceptId),
+          userId ? eq(conceptMastery.userId, userId) : eq(conceptMastery.guestSessionId, guestSessionId!)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    // Mark as mastered
+    const [mastery] = await db
+      .insert(conceptMastery)
+      .values({
+        conceptId,
+        userId: userId || null,
+        guestSessionId: guestSessionId || null,
+      })
+      .returning();
+
+    return mastery;
+  }
+
+  async isConceptMastered(conceptId: string, userId?: string, guestSessionId?: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(conceptMastery)
+      .where(
+        and(
+          eq(conceptMastery.conceptId, conceptId),
+          userId ? eq(conceptMastery.userId, userId) : eq(conceptMastery.guestSessionId, guestSessionId!)
+        )
+      )
+      .limit(1);
+
+    return result.length > 0;
+  }
+
+  async getMasteredConcepts(userId?: string, guestSessionId?: string): Promise<string[]> {
+    const result = await db
+      .select({ conceptId: conceptMastery.conceptId })
+      .from(conceptMastery)
+      .where(
+        userId ? eq(conceptMastery.userId, userId) : eq(conceptMastery.guestSessionId, guestSessionId!)
+      );
+
+    return result.map(r => r.conceptId);
   }
 }
 

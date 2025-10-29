@@ -1,8 +1,9 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthDropdown } from "@/components/auth-dropdown";
 import { useAuth } from "@/hooks/useAuth";
-import { Brain, LogOut, User, Upload, BarChart3 } from "lucide-react";
+import { Brain, LogOut, Upload, BarChart3 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Navbar() {
@@ -56,13 +57,7 @@ export function Navbar() {
               </div>
             )}
             {!isLoading && !isAuthenticated && (
-              <Button
-                onClick={() => window.location.href = "/api/login"}
-                data-testid="button-login"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
+              <AuthDropdown />
             )}
             <ThemeToggle />
           </div>

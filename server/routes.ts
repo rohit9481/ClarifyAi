@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { setupAuth, isAuthenticated } from "./replitAuth.js";
+import { setupAuth, isAuthenticated } from "./auth.js";
 import multer from "multer";
 import { extractConceptsAndQuestions, generateLovableTutorExplanation, generateConceptAnswer } from "./gemini.js";
 import { createAvatarSession, makeAvatarSpeak, closeAvatarSession } from "./heygen.js";
@@ -18,17 +18,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Note: /api/auth/user is now handled in auth.ts
 
   // Document Upload & Processing (supports PDF and DOCX)
   app.post("/api/upload-pdf", upload.single("pdf"), async (req: any, res) => {
@@ -129,6 +119,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching concept:", error);
       res.status(500).json({ message: "Failed to fetch concept" });
+    }
+  });
+
+  // Mark concept as mastered
+  app.post("/api/concepts/:id/master", async (req: any, res) => {
+    try {
+      const conceptId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.body.guestSessionId;
+
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ message: "User or guest session required" });
+      }
+
+      const mastery = await storage.markConceptAsMastered(conceptId, userId, guestSessionId);
+      res.json(mastery);
+    } catch (error: any) {
+      console.error("Error marking concept as mastered:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Check if concept is mastered
+  app.get("/api/concepts/:id/mastery", async (req: any, res) => {
+    try {
+      const conceptId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.query.guestSessionId as string;
+
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ message: "User or guest session required" });
+      }
+
+      const isMastered = await storage.isConceptMastered(conceptId, userId, guestSessionId);
+      res.json({ mastered: isMastered });
+    } catch (error: any) {
+      console.error("Error checking concept mastery:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate new questions for a concept (for re-testing)
+  app.post("/api/concepts/:id/generate-questions", async (req: any, res) => {
+    try {
+      const conceptId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      const guestSessionId = req.body.guestSessionId;
+
+      if (!userId && !guestSessionId) {
+        return res.status(400).json({ message: "User or guest session required" });
+      }
+
+      // Get the concept details
+      const concept = await storage.getConcept(conceptId);
+      if (!concept) {
+        return res.status(404).json({ message: "Concept not found" });
+      }
+
+      // Get the PDF to extract relevant text
+      const pdf = await storage.getPdf(concept.pdfId);
+      if (!pdf) {
+        return res.status(404).json({ message: "PDF not found" });
+      }
+
+      // Generate new questions using Gemini
+      const conceptText = `Concept: ${concept.conceptName}\nDescription: ${concept.conceptDescription}\n\nContext from document:\n${pdf.extractedText.substring(0, 2000)}`;
+      const newQuestions = await extractConceptsAndQuestions(conceptText, 1);
+
+      if (newQuestions.length === 0 || newQuestions[0].questions.length === 0) {
+        return res.status(500).json({ message: "Failed to generate new questions" });
+      }
+
+      // Store the new questions
+      const storedQuestions = [];
+      for (const question of newQuestions[0].questions) {
+        const stored = await storage.createQuestion({
+          conceptId: concept.id,
+          questionText: question.questionText,
+          options: question.options,
+          correctAnswer: question.correctAnswer,
+        });
+        storedQuestions.push(stored);
+      }
+
+      res.json({ questions: storedQuestions, count: storedQuestions.length });
+    } catch (error: any) {
+      console.error("Error generating new questions:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 

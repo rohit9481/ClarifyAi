@@ -132,6 +132,23 @@ export const insertAnswerSchema = createInsertSchema(answers).omit({
 export type InsertAnswer = z.infer<typeof insertAnswerSchema>;
 export type Answer = typeof answers.$inferSelect;
 
+// Concept mastery tracking
+export const conceptMastery = pgTable("concept_mastery", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conceptId: varchar("concept_id").notNull(),
+  userId: varchar("user_id"), // null for guest users
+  guestSessionId: varchar("guest_session_id"), // for guest users
+  masteredAt: timestamp("mastered_at").defaultNow(),
+});
+
+export const insertConceptMasterySchema = createInsertSchema(conceptMastery).omit({
+  id: true,
+  masteredAt: true,
+});
+
+export type InsertConceptMastery = z.infer<typeof insertConceptMasterySchema>;
+export type ConceptMastery = typeof conceptMastery.$inferSelect;
+
 // Extended types for frontend use
 export type QuestionWithConcept = Question & {
   concept: Concept;

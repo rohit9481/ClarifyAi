@@ -1,19 +1,57 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { RotateCcw, ArrowLeft, Check, X, AlertCircle } from "lucide-react";
+import { RotateCcw, ArrowLeft, Check, X, AlertCircle, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Report() {
   const { sessionId } = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
   const { data: reportData, isLoading } = useQuery({
     queryKey: ["/api/quiz-sessions", sessionId, "report"],
     enabled: !!sessionId,
+  });
+
+  // Re-test weak concepts mutation
+  const retestMutation = useMutation({
+    mutationFn: async () => {
+      const guestSessionId = localStorage.getItem("guestSessionId");
+      
+      // Generate new questions for all weak concepts
+      const questionGenerationPromises = weakConcepts.map((concept: any) =>
+        apiRequest("POST", `/api/concepts/${concept.id}/generate-questions`, { guestSessionId })
+      );
+      
+      await Promise.all(questionGenerationPromises);
+      
+      // The new questions are now in the database, quiz will automatically pick them up
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: "New Questions Generated!",
+        description: "Ready to re-test your weak concepts with fresh questions.",
+      });
+      // Redirect to quiz with the same PDF
+      setTimeout(() => {
+        setLocation(`/quiz/${reportData.pdfId}`);
+      }, 1500);
+    },
+    onError: (error) => {
+      console.error("Failed to generate new questions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate new questions. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -84,7 +122,7 @@ export default function Report() {
               </p>
             </div>
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setLocation(`/quiz/${reportData.pdfId}`)}
@@ -93,6 +131,17 @@ export default function Report() {
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Retake Test
               </Button>
+              {weakConcepts.length > 0 && (
+                <Button
+                  variant="default"
+                  onClick={() => retestMutation.mutate()}
+                  disabled={retestMutation.isPending}
+                  data-testid="button-retest-weak"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {retestMutation.isPending ? "Generating..." : "Re-test Weak Concepts"}
+                </Button>
+              )}
               <Button
                 onClick={() => setLocation("/dashboard")}
                 data-testid="button-dashboard"

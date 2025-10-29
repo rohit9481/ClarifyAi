@@ -160,6 +160,24 @@ An AI-powered tutoring application that uses PDF-based concept extraction, adapt
   - Play/pause, mute, replay controls
   - Auto-plays explanations on review page
   - Works in all modern browsers (Chrome, Edge, Safari, Firefox)
+- ✅ **Google OAuth Integration**
+  - Added Google OAuth as authentication option alongside Replit Auth
+  - Created unified auth system supporting both providers conditionally
+  - AuthDropdown component for multiple login options
+  - .env.example and comprehensive LOCAL_SETUP.md for local development
+  - README.md and DEPLOYMENT.md documentation
+- ✅ **Concept Mastery Tracking**
+  - New concept_mastery database table to track user progress
+  - Backend API: POST /api/concepts/:id/master, GET /api/concepts/:id/mastery
+  - Frontend integration in Virtual and Text learning modes
+  - Toast notifications when concepts marked as mastered
+  - Persistent tracking across sessions for both authenticated and guest users
+- ✅ **Re-test with New Questions**
+  - POST /api/concepts/:id/generate-questions endpoint using Gemini AI
+  - "Re-test Weak Concepts" button on session report page
+  - Generates 5 fresh questions per weak concept
+  - Creates new quiz session with only the new questions
+  - Loading states and user feedback during question generation
 - ✅ **Session Report with Performance Charts**
   - Comprehensive report page showing quiz results with score percentage
   - Performance chart by concept showing correct/incorrect breakdown
