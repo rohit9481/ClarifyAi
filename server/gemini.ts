@@ -155,13 +155,19 @@ Concept Description: ${conceptDescription}
 The student asks: "${studentQuestion}"
 
 Provide a clear, helpful answer that:
-1. Directly addresses their question
-2. Uses simple, easy-to-understand language
-3. Includes relevant examples when helpful
-4. Encourages further learning
-5. Stays warm and supportive in tone
+1. Directly addresses their question in simple, everyday language
+2. Breaks down complex ideas into easy-to-understand parts
+3. ALWAYS includes at least one relatable real-world example or analogy to make it interesting
+4. Uses conversational tone with "you" and "let's"
+5. Stays warm, supportive, and encouraging
 
-Keep the answer concise but thorough (3-5 sentences).`;
+Structure your response:
+- Start with a simple, direct answer
+- Explain the concept step-by-step
+- Provide a concrete example or analogy
+- End with encouragement or an invitation to ask more
+
+Aim for 4-6 sentences that feel like a friendly conversation.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -172,5 +178,42 @@ Keep the answer concise but thorough (3-5 sentences).`;
   } catch (error) {
     console.error("Gemini answer generation error:", error);
     return "That's an interesting question! This concept relates to the main ideas we're studying. Let's explore it together.";
+  }
+}
+
+export async function generateInitialConceptExplanation(
+  conceptName: string,
+  conceptDescription: string
+): Promise<string> {
+  try {
+    const prompt = `You are a warm, supportive AI tutor introducing a concept the student struggled with.
+
+Concept: ${conceptName}
+Description: ${conceptDescription}
+
+Create an engaging introduction that:
+1. Welcomes the student warmly
+2. Explains the concept in simple, everyday language
+3. ALWAYS includes a relatable real-world example or analogy
+4. Breaks down the concept into easy-to-understand parts
+5. Uses conversational tone - like explaining to a friend
+
+Structure:
+- Start with a warm greeting about learning this concept
+- Explain what it is in simple terms
+- Give a concrete example or analogy that makes it click
+- End by asking if they have questions
+
+Make it feel like a conversation, not a lecture. Aim for 5-7 sentences.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    
+    return response.text || `Let's explore ${conceptName} together! This is an important concept that will help you understand the material better.`;
+  } catch (error) {
+    console.error("Gemini explanation error:", error);
+    return `Let's dive into ${conceptName}! I'm here to help you understand this concept step by step. Feel free to ask any questions!`;
   }
 }
