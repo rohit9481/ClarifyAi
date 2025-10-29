@@ -34,7 +34,7 @@ export default function TextLearn() {
   });
 
   // Get concept details
-  const { data: concept, isLoading } = useQuery<{ id: string; conceptName: string; conceptDescription: string }>({
+  const { data: concept, isLoading } = useQuery({
     queryKey: ["/api/concepts", conceptId],
     enabled: !!conceptId,
   });

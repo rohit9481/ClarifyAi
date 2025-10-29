@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Generate new questions using Gemini
         const conceptText = `Concept: ${concept.conceptName}\nDescription: ${concept.conceptDescription}\n\nContext from document:\n${pdf.extractedText.substring(0, 2000)}`;
-        const newQuestions = await extractConceptsAndQuestions(conceptText);
+        const newQuestions = await extractConceptsAndQuestions(conceptText, 1);
 
         if (newQuestions.length > 0 && newQuestions[0].questions.length > 0) {
           // Store the new questions
