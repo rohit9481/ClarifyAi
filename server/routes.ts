@@ -44,9 +44,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Extract text based on file type
       if (fileExtension === "pdf") {
-        const parser = new PDFParse({ data: fileBuffer });
-        const pdfData = await parser.getText();
-        extractedText = pdfData.pages.map((p: any) => p.text).join('\n');
+        try {
+          const parser = new PDFParse({ data: fileBuffer });
+          const pdfData = await parser.getText();
+          extractedText = pdfData.pages.map((p: any) => p.text).join('\n');
+        } catch (pdfError: any) {
+          console.error("PDF parsing error:", pdfError.message);
+          return res.status(400).json({ 
+            message: "Unable to parse PDF file. Please ensure it's a valid PDF document with readable text content." 
+          });
+        }
       } else if (fileExtension === "docx") {
         const result = await mammoth.extractRawText({ buffer: fileBuffer });
         extractedText = result.value;
