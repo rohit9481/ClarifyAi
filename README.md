@@ -244,7 +244,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Multi-language support
 
 ---
-##contributors: 
-##PES2UG22CS344,PES2UG22CS374,PES2UG23CS819,PES2UG23CS821
+## contributors: PES2UG22CS344,PES2UG22CS374,PES2UG23CS819,PES2UG23CS821
 
 Built with ❤️ using AI to make learning more interactive and effective.
