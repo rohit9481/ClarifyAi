@@ -1,4 +1,4 @@
-# AI Tutor Avatar 🎓
+# AI Tutor Avatar🎓
 
 An intelligent, adaptive learning platform that transforms static educational documents into interactive learning experiences powered by Google's Gemini AI.
 
@@ -244,5 +244,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Multi-language support
 
 ---
+##contributors: 
+##PES2UG22CS344,PES2UG22CS374,PES2UG23CS819,PES2UG23CS821
 
 Built with ❤️ using AI to make learning more interactive and effective.
