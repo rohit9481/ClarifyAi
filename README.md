@@ -1,6 +1,6 @@
 # AI Tutor Avatar🎓
 
-An intelligent, adaptive learning platform that transforms static educational documents into interactive learning experiences powered by Google's Gemini AI.
+An intelligent, adaptive learning platform that transforms static educational documents into interactive learning experiences powered by Google's LLM.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)
